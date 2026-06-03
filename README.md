@@ -108,10 +108,27 @@ Ver `.env.example` para lista de variáveis necessárias.
 
 ---
 
+## Fluxo de trabalho e deploy
+
+O fluxo seguro de desenvolvimento e implantacao segue tres ambientes:
+
+- WSL/local → origem de todos os commits
+- GitHub privado (`https://github.com/Jacqueline-Societario/portal-sigma`) → ponte e historico oficial
+- VPS → ambiente de producao; recebe apenas commits publicados no GitHub
+
+Regra principal: nenhum codigo vai para a VPS sem ter passado pelo GitHub primeiro.
+
+Documentacao completa:
+- `DEPLOY.md` — procedimento oficial, fonte de verdade, fluxo de deploy, rollback, arquivos protegidos
+- `CHECKLIST_DEPLOY.md` — checklist pratico antes, durante e apos cada deploy
+
+---
+
 ## Status do repositorio
 
 - Git proprio criado em `main` em 02/06/2026
-- Remote: pendente (GitHub privado a criar)
+- GitHub privado conectado em 03/06/2026: `https://github.com/Jacqueline-Societario/portal-sigma`
+- Branch `main` sincronizada com `origin/main` (commit atual: `04e53bc`)
+- Remote na VPS: ainda nao configurado — etapa planejada
 - Deploy automatico: nao existe — ver DEPLOY.md
-- Fonte de verdade formal: WSL assume papel de desenvolvimento;
-  VPS e o ambiente operacional de producao
+- Fonte de verdade: WSL para desenvolvimento, GitHub para historico, VPS para producao

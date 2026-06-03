@@ -14,87 +14,160 @@ Nao presumir automacao onde nao existe.
 
 ## Ambientes
 
-| Ambiente  | Caminho                                                                 | Observacao               |
-|-----------|-------------------------------------------------------------------------|--------------------------|
-| WSL/local | `/home/jacqueline_benedito/claude/clientes/sigma/projetos/portal-sigma/` | Desenvolvimento e Git    |
-| VPS       | `/home/jacqueline-benedito/projetos/portal-sigma/`                      | Producao (sempre ativo)  |
+- WSL/local: `/home/jacqueline_benedito/claude/clientes/sigma/projetos/portal-sigma/`
+  Funcao: desenvolvimento e origem de todos os commits
+- GitHub privado: `https://github.com/Jacqueline-Societario/portal-sigma`
+  Funcao: repositorio remoto oficial, ponte entre WSL e VPS
+- VPS: `/home/jacqueline-benedito/projetos/portal-sigma/`
+  Funcao: producao (sempre ativo, porta 5080)
 
-SSH VPS: `jacqueline-benedito@129.121.54.101 -p 22022`
-Chave: `~/.ssh/id_sigma_jacqueline`
+SSH VPS: `ssh jacqueline-benedito@129.121.54.101 -p 22022 -i ~/.ssh/id_sigma_jacqueline`
 
 ---
 
-## Fluxo recomendado
+## Fonte de verdade
 
-### 1. Desenvolver no WSL/local
+- **WSL** e a origem de desenvolvimento. Todo codigo novo nasce aqui.
+- **GitHub** e a fonte de verdade remota oficial. Nenhum commit vai para a VPS sem antes passar pelo GitHub.
+- **VPS** e o ambiente de producao. Recebe apenas commits ja publicados no GitHub.
+- **Regra de emergencia**: se for inevitavel editar codigo direto na VPS, registrar o que foi alterado, qual arquivo, qual linha, e transferir a alteracao para o WSL na sessao seguinte.
+
+---
+
+## Alerta: historicos divergentes (estado em 03/06/2026)
+
+A VPS tem um git local proprio com historico independente do WSL/GitHub.
+Os dois historicos sao divergentes — nao compartilham commits.
+
+Ao conectar o remote do GitHub na VPS sera necessario:
+```bash
+git fetch origin
+git merge origin/main --allow-unrelated-histories
+```
+Ou alternativamente, substituir o historico local da VPS pelo do GitHub (mais limpo, exige planejamento).
+Essa etapa e separada e exige checklist proprio antes de executar.
+
+---
+
+## Fluxo de desenvolvimento (WSL → GitHub)
+
+### 1. Desenvolver no WSL
 
 Alterar arquivos no WSL.
 Testar localmente se possivel.
-Nao alterar producao diretamente.
+Nao alterar producao diretamente, salvo emergencia documentada.
 
-### 2. Commitar no Git proprio
+### 2. Revisar antes de commitar
 
 ```bash
-cd /home/jacqueline_benedito/claude/clientes/sigma/projetos/portal-sigma/
 git status
-git add [arquivos alterados]
-git commit -m "tipo: descricao clara da alteracao"
+git diff [arquivo]
 ```
 
-Usar commits atomicos: uma funcionalidade ou correcao por commit.
+Confirmar que nenhum arquivo sensivel esta no staging.
 
-### 3. Transferir para VPS
+### 3. Commitar
 
-Metodo atual: transferencia manual de arquivos via SSH.
-Usar apenas arquivos versionados — nunca transferir `.env`, `portal.db`, `credentials/`, `uploads/`.
-
-Metodo de transferencia validado (subprocess Python com base64):
-```python
-# Ver feedback_ssh_vps_transfer_method.md na memoria do assistente
-# Chunks de 900 chars, decode na VPS, sem pipe|ssh ou process substitution
+```bash
+git add [arquivos especificos — nunca git add .]
+git commit -m "tipo: descricao clara"
 ```
 
-Futuramente: `git pull` direto na VPS apos configurar remote GitHub.
+Tipos de commit: `feat`, `fix`, `chore`, `docs`, `refactor`, `style`.
+Usar commits atomicos: uma alteracao por commit.
 
-### 4. Aplicar na VPS
+### 4. Push para GitHub
 
-Antes de aplicar qualquer alteracao:
-- Confirmar pasta correta na VPS
-- Confirmar qual commit esta em producao
-- Confirmar que o servico esta ativo
+```bash
+git push origin main
+```
 
-Aplicar apenas arquivos versionados.
-Nao sobrescrever `.env`, `portal.db`, `credentials/` da VPS.
+Confirmar que o push foi concluido antes de qualquer deploy.
 
-### 5. Reiniciar servico (somente se necessario)
+---
+
+## Fluxo de deploy (GitHub → VPS)
+
+### Etapa 1 — Pre-deploy (no WSL antes de conectar na VPS)
+
+- Confirmar que o commit alvo ja esta no GitHub
+- Identificar qual commit esta em producao na VPS
+- Identificar quais arquivos Python foram alterados (determina se reinicio e necessario)
+- Planejar rollback: saber qual commit anterior funciona
+
+### Etapa 2 — Pre-deploy (na VPS)
+
+```bash
+# Confirmar pasta e servico
+cd /home/jacqueline-benedito/projetos/portal-sigma/
+systemctl --user status portal-sigma.service
+
+# Confirmar espaco em disco
+df -h ~
+
+# Anotar commit atual em producao
+git log --oneline -3
+```
+
+### Etapa 3 — Aplicar alteracoes
+
+**Metodo atual (enquanto remote GitHub nao estiver conectado na VPS):**
+Transferencia manual de arquivos via SSH com base64.
+Usar apenas arquivos versionados.
+Nunca transferir `.env`, `portal.db`, `credentials/`, `uploads/`.
+
+**Metodo futuro (apos conectar remote na VPS):**
+```bash
+git fetch origin
+git diff HEAD origin/main --name-only   # revisar o que vai mudar
+git pull origin main
+```
+
+### Etapa 4 — Instalar dependencias (somente se requirements.txt mudou)
+
+```bash
+cd /home/jacqueline-benedito/projetos/portal-sigma/
+pip install -r requirements.txt --quiet
+```
+
+### Etapa 5 — Reiniciar servico (somente se Python foi alterado)
 
 ```bash
 systemctl --user restart portal-sigma.service
 systemctl --user status portal-sigma.service
 ```
 
-Reiniciar somente apos alteracoes em Python (blueprints, portal.py, database.py).
-Alteracoes apenas em templates HTML ou assets estaticos nao exigem reinicio.
+Reiniciar somente quando blueprints, portal.py, database.py ou security.py foram alterados.
+Alteracoes apenas em templates HTML, CSS ou assets estaticos nao exigem reinicio.
 
-### 6. Verificar apos deploy
+### Etapa 6 — Testar apos deploy
 
-- Login funciona
-- Dashboard carrega
-- Modulo alterado funciona
-- Sem erros no log (sem expor dados sensiveis)
+- Login funciona com usuario e senha validos
+- Recuperacao de senha funciona
+- Dashboard principal carrega sem erro
+- Modulo alterado se comporta conforme esperado
+- Consulta CNAE funciona (se cnae.py foi alterado)
+- Upload funciona (se procuracoes.py ou outros blueprints de upload foram alterados)
+- Nenhum erro 500 no browser
+- Servico estavel 30 segundos apos reinicio
 
-### 7. Registrar commit implantado
+### Etapa 7 — Registrar
 
-Anotar qual commit foi implantado e quando.
-Usar o arquivo de sessao ou o PROJETO_STATUS.md.
+Anotar em DEPLOY.md, secao "Historico de commits implantados":
+- data do deploy
+- hash do commit
+- descricao resumida
+- resultado
 
 ---
 
 ## Regras de seguranca
 
-- Nunca versionar `.env`, `portal.db`, `credentials/`, `uploads/`, `static/data/`, `backup_config.json`
-- Nunca editar producao diretamente sem registrar o que foi alterado
-- Nunca sobrescrever o `.env` da VPS — ele tem credenciais de producao
+- Nunca versionar `.env`, `portal.db`, `credentials/`, `uploads/`, `static/data/`, `backup_config.json`, `logs/`, `backups/`, arquivos `.xlsx` gerados, tokens ou chaves
+- Nunca usar `git add .` — sempre adicionar arquivos especificos
+- Nunca sobrescrever o `.env` da VPS em deploy
+- Nunca sobrescrever `portal.db`, `uploads/`, `credentials/` da VPS em deploy
+- Nunca editar producao diretamente sem registrar
 - Nunca subir dados reais de clientes para repositorio
 - Em caso de duvida: pausar, diagnosticar, perguntar antes de agir
 
@@ -104,16 +177,16 @@ Usar o arquivo de sessao ou o PROJETO_STATUS.md.
 
 Se algo der errado apos deploy:
 
-1. Identificar o commit anterior estavel (`git log --oneline`)
-2. Transferir os arquivos da versao anterior para a VPS
-3. Reiniciar servico
-4. Verificar funcionamento
-5. Registrar o rollback
+1. Identificar o commit anterior estavel: `git log --oneline`
+2. Transferir os arquivos desse commit para a VPS (metodo base64 ou git checkout)
+3. Reiniciar servico: `systemctl --user restart portal-sigma.service`
+4. Testar login e dashboard
+5. Registrar o rollback no historico abaixo
+6. Nunca apagar `portal.db` ou `uploads/` para reverter codigo
 
 ---
 
 ## Historico de commits implantados
 
-| Data       | Commit  | Descricao resumida                       | Responsavel    |
-|------------|---------|------------------------------------------|----------------|
-| 02/06/2026 | e9fda46 | Commit inicial — Git proprio criado      | Jacqueline / Yuzu |
+- 02/06/2026 | e9fda46 | Commit inicial — Git proprio criado | Jacqueline / Yuzu
+- 03/06/2026 | 04e53bc | Normalizar permissoes de assets binarios | Yuzu (nao implantado na VPS ainda)
