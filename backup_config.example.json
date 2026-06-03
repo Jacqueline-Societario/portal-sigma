@@ -1,0 +1,7 @@
+{
+  "backup_spreadsheet_id": "INSERIR_ID_DA_PLANILHA_DE_BACKUP",
+  "criado_em": "YYYY-MM-DD HH:MM:SS",
+  "ultimo_backup": null,
+  "ultimo_backup_status": "exemplo",
+  "ultimo_backup_total": 0
+}

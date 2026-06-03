@@ -1,0 +1,355 @@
+{% extends "base.html" %}
+{% block title %}Gerenciar Formulários{% endblock %}
+{% block page_title %}Gerenciar Formulários{% endblock %}
+
+{% block extra_styles %}
+.page-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 24px;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+.card {
+  background: var(--white);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  margin-bottom: 16px;
+}
+.card-header {
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--border);
+  font-size: 14px;
+  font-weight: 700;
+}
+.card-body { padding: 20px; }
+
+.form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+  margin-bottom: 14px;
+}
+.form-group { display: flex; flex-direction: column; gap: 5px; }
+.form-label { font-size: 12px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .5px; }
+.form-input {
+  padding: 8px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+  color: var(--text);
+  outline: none;
+  transition: border-color .15s;
+}
+.form-input:focus { border-color: var(--sigma-red); }
+
+.tabela { width: 100%; border-collapse: collapse; }
+.tabela th, .tabela td {
+  padding: 10px 14px;
+  font-size: 13px;
+  text-align: left;
+  border-bottom: 1px solid #f3f4f6;
+}
+.tabela th {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .8px;
+  color: var(--muted);
+  background: #f9fafb;
+}
+.tabela tr:hover td { background: #fafafa; }
+.tabela tr:last-child td { border-bottom: none; }
+
+.badge-ativo   { background: #f0fdf4; color: #166534; font-size:11px; font-weight:700; padding:2px 8px; border-radius:99px; }
+.badge-inativo { background: #f3f4f6; color: #9ca3af; font-size:11px; font-weight:700; padding:2px 8px; border-radius:99px; }
+
+.link-form { color: var(--sigma-red); font-size:12px; text-decoration:none; }
+.link-form:hover { text-decoration: underline; }
+
+/* Script box */
+.script-box {
+  background: #1e1e2e;
+  border-radius: var(--radius);
+  padding: 16px 20px;
+  font-family: 'Consolas', 'Monaco', monospace;
+  font-size: 12px;
+  color: #cdd6f4;
+  line-height: 1.6;
+  overflow-x: auto;
+  white-space: pre;
+  position: relative;
+}
+.copy-btn {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  background: rgba(255,255,255,0.1);
+  border: none;
+  color: #cdd6f4;
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-size: 11px;
+  cursor: pointer;
+  transition: background .15s;
+}
+.copy-btn:hover { background: rgba(255,255,255,0.2); }
+
+.vazio { text-align:center; padding:32px 20px; color:var(--muted); font-size:13px; }
+
+.toast {
+  position: fixed; bottom: 24px; right: 24px;
+  background: #1a1a1a; color: #fff;
+  padding: 12px 20px; border-radius: 10px;
+  font-size: 13px; font-weight: 600; z-index: 9999;
+  opacity: 0; transform: translateY(10px);
+  transition: opacity .25s, transform .25s; pointer-events: none;
+}
+.toast.show { opacity: 1; transform: translateY(0); }
+.toast.ok   { background: #166534; }
+.toast.erro { background: #991b1b; }
+{% endblock %}
+
+{% block content %}
+
+<div class="page-header">
+  <div>
+    <h2 style="font-size:18px; font-weight:800; margin-bottom:4px;">Gerenciar Formulários</h2>
+    <p style="font-size:13px; color:var(--muted);">Cadastre os formulários Google a serem monitorados e configure o Apps Script.</p>
+  </div>
+  <a href="{{ url_for('processos.index') }}" class="btn btn-outline btn-sm">
+    &#8592; Ver Processos
+  </a>
+</div>
+
+<!-- Cadastrar novo formulário -->
+<div class="card">
+  <div class="card-header">Cadastrar Formulário</div>
+  <div class="card-body">
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">Nome do Formulário *</label>
+        <input class="form-input" type="text" id="f-nome" placeholder="ex: Entrevista de Abertura de Empresa">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Tipo de Processo *</label>
+        <input class="form-input" type="text" id="f-tipo" placeholder="ex: Abertura de Empresa">
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">Link do Formulário</label>
+        <input class="form-input" type="url" id="f-link" placeholder="https://forms.gle/...">
+      </div>
+      <div class="form-group">
+        <label class="form-label">ID do Google Form (opcional, para deduplicação)</label>
+        <input class="form-input" type="text" id="f-formid" placeholder="ex: 1FAIpQLSd...">
+      </div>
+    </div>
+    <button class="btn btn-primary btn-sm" onclick="cadastrarFormulario()">
+      Cadastrar Formulário
+    </button>
+  </div>
+</div>
+
+<!-- Lista de formulários -->
+<div class="card">
+  <div class="card-header">Formulários Cadastrados ({{ formularios|length }})</div>
+  {% if formularios %}
+  <table class="tabela">
+    <thead>
+      <tr>
+        <th>Nome</th>
+        <th>Tipo de Processo</th>
+        <th>Link</th>
+        <th>Form ID</th>
+        <th>Status</th>
+        <th>Ações</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for f in formularios %}
+      <tr id="frow-{{ f.id }}">
+        <td><strong>{{ f.nome }}</strong></td>
+        <td>{{ f.tipo_processo }}</td>
+        <td>
+          {% if f.link_formulario %}
+          <a href="{{ f.link_formulario }}" class="link-form" target="_blank">Abrir</a>
+          {% else %}
+          <span style="color:var(--muted)">—</span>
+          {% endif %}
+        </td>
+        <td style="font-size:11px; color:var(--muted); max-width:140px; overflow:hidden; text-overflow:ellipsis;">
+          {{ f.form_id or '—' }}
+        </td>
+        <td>
+          <span class="{% if f.ativo %}badge-ativo{% else %}badge-inativo{% endif %}" id="fbadge-{{ f.id }}">
+            {% if f.ativo %}Ativo{% else %}Inativo{% endif %}
+          </span>
+        </td>
+        <td>
+          <button class="btn btn-outline btn-sm" onclick="toggleFormulario({{ f.id }})"
+                  style="margin-right:6px; font-size:11px; padding:4px 10px;">
+            {% if f.ativo %}Desativar{% else %}Ativar{% endif %}
+          </button>
+          <button class="btn btn-sm" onclick="deletarFormulario({{ f.id }})"
+                  style="font-size:11px; padding:4px 10px; background:#fef2f2; color:#991b1b; border:1px solid #fca5a5;">
+            Remover
+          </button>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <div class="vazio">Nenhum formulário cadastrado ainda. Cadastre acima para organizar os processos por tipo.</div>
+  {% endif %}
+</div>
+
+<!-- Token do Webhook -->
+<div class="card">
+  <div class="card-header">Endpoint do Webhook</div>
+  <div class="card-body">
+    <p style="font-size:13px; color:var(--muted); margin-bottom:12px;">
+      Configure o token <code>FORMS_WEBHOOK_TOKEN</code> no arquivo <code>.env</code> do portal.
+      Use esse token na URL abaixo.
+    </p>
+    <div style="background:#f9fafb; border:1px solid var(--border); border-radius:8px; padding:12px 16px; font-family:monospace; font-size:13px; color:var(--text); word-break:break-all;">
+      POST &nbsp;<strong>https://societario.gsigma.com.br/webhook/forms/&lt;SEU_TOKEN_AQUI&gt;</strong>
+    </div>
+  </div>
+</div>
+
+<!-- Script Apps Script -->
+<div class="card">
+  <div class="card-header">Script Google Apps Script</div>
+  <div class="card-body">
+    <p style="font-size:13px; color:var(--muted); margin-bottom:16px;">
+      Para cada formulário Google, siga os passos:
+      <br><strong>1.</strong> Abra o formulário no Google Forms
+      <br><strong>2.</strong> Clique nos 3 pontos no topo direito → <em>Script editor</em>
+      <br><strong>3.</strong> Cole o script abaixo, ajuste o token e salve
+      <br><strong>4.</strong> Vá em <em>Triggers</em> (ícone de relógio) → Adicione gatilho: função <code>onFormSubmit</code>, evento <em>On form submit</em>
+    </p>
+    <div style="position:relative;">
+      <div class="script-box" id="scriptBox">// ═══════════════════════════════════════════════════════════════
+// Portal Societário Sigma — Integração Google Forms
+// Cole este script no editor do Google Apps Script do formulário.
+// ═══════════════════════════════════════════════════════════════
+
+var PORTAL_URL   = "https://societario.gsigma.com.br/webhook/forms/SEU_TOKEN_AQUI";
+var FORM_NAME    = "Entrevista de Abertura de Empresa"; // Altere para o nome deste formulário
+var TIPO_PROCESSO = "Abertura de Empresa"; // Tipo de processo (ex: Alteração, MEI, Alvará)
+
+function onFormSubmit(e) {
+  try {
+    var form     = FormApp.getActiveForm();
+    var response = e.response;
+
+    // Montar payload
+    var payload = {
+      form_id:           form.getId(),
+      form_name:         FORM_NAME,
+      tipo_processo:     TIPO_PROCESSO,
+      response_id:       response.getId(),
+      respondent_email:  response.getRespondentEmail() || "",
+      submitted_at:      response.getTimestamp().toISOString(),
+      responses:         {}
+    };
+
+    // Coletar respostas (pergunta → resposta)
+    var itemResponses = response.getItemResponses();
+    for (var i = 0; i < itemResponses.length; i++) {
+      var item = itemResponses[i];
+      var pergunta = item.getItem().getTitle();
+      var resposta = item.getResponse();
+      // Grids e caixas de seleção múltipla retornam array
+      if (Array.isArray(resposta)) {
+        resposta = resposta.join(", ");
+      }
+      payload.responses[pergunta] = resposta || "";
+    }
+
+    // Enviar para o portal
+    var options = {
+      method:             "post",
+      contentType:        "application/json",
+      payload:            JSON.stringify(payload),
+      muteHttpExceptions: true
+    };
+
+    var result = UrlFetchApp.fetch(PORTAL_URL, options);
+    Logger.log("Portal response: " + result.getResponseCode() + " — " + result.getContentText());
+
+  } catch (err) {
+    Logger.log("Erro ao enviar para o portal: " + err.toString());
+  }
+}
+</div>
+      <button class="copy-btn" onclick="copiarScript()">Copiar</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+function mostrarToast(msg, tipo) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast show ' + (tipo || '');
+  clearTimeout(t._to);
+  t._to = setTimeout(() => { t.className = 'toast'; }, 2800);
+}
+
+function cadastrarFormulario() {
+  const nome = document.getElementById('f-nome').value.trim();
+  const tipo = document.getElementById('f-tipo').value.trim();
+  if (!nome || !tipo) { mostrarToast('Nome e Tipo são obrigatórios.', 'erro'); return; }
+  fetch('/processos/admin/formularios', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      nome: nome,
+      tipo_processo: tipo,
+      link_formulario: document.getElementById('f-link').value.trim(),
+      form_id: document.getElementById('f-formid').value.trim(),
+    })
+  })
+  .then(r => r.json())
+  .then(d => {
+    if (d.ok) { mostrarToast('Formulário cadastrado!', 'ok'); setTimeout(() => location.reload(), 900); }
+    else mostrarToast(d.erro || 'Erro.', 'erro');
+  });
+}
+
+function toggleFormulario(id) {
+  fetch('/processos/admin/formularios/' + id + '/toggle', { method: 'POST' })
+  .then(r => r.json())
+  .then(d => {
+    if (d.ok) { mostrarToast('Status alterado.', 'ok'); setTimeout(() => location.reload(), 700); }
+    else mostrarToast(d.erro || 'Erro.', 'erro');
+  });
+}
+
+function deletarFormulario(id) {
+  if (!confirm('Remover este formulário? Os processos já criados não serão excluídos.')) return;
+  fetch('/processos/admin/formularios/' + id + '/deletar', { method: 'POST' })
+  .then(r => r.json())
+  .then(d => {
+    if (d.ok) { mostrarToast('Removido.', 'ok'); document.getElementById('frow-' + id).remove(); }
+    else mostrarToast(d.erro || 'Erro.', 'erro');
+  });
+}
+
+function copiarScript() {
+  const texto = document.getElementById('scriptBox').textContent;
+  navigator.clipboard.writeText(texto).then(() => mostrarToast('Script copiado!', 'ok'));
+}
+</script>
+{% endblock %}

@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+{% block title %}{{ manual.titulo }}{% endblock %}
+{% block page_title %}{{ manual.titulo }}{% endblock %}
+
+{% block extra_styles %}
+.manual-meta {
+  font-size: 13px; color: var(--muted);
+  margin-bottom: 24px;
+  display: flex; gap: 16px; align-items: center;
+}
+.manual-body {
+  background: #fff; border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 32px;
+  line-height: 1.7; font-size: 15px;
+}
+.manual-body h1 { font-size: 22px; font-weight: 700; margin: 0 0 12px; color: var(--sigma-red); }
+.manual-body h2 { font-size: 18px; font-weight: 700; margin: 24px 0 10px; color: #333; border-bottom: 1px solid #eee; padding-bottom: 4px; }
+.manual-body h3 { font-size: 15px; font-weight: 700; margin: 18px 0 8px; }
+.manual-body p { margin: 0 0 10px; }
+.manual-body ul, .manual-body ol { margin: 0 0 10px; padding-left: 24px; }
+.manual-body blockquote { border-left: 3px solid var(--sigma-red); margin: 0 0 10px; padding: 8px 16px; background: #fafafa; color: #555; }
+.manual-body a { color: var(--sigma-red); }
+.manual-body img { max-width: 100%; height: auto; border-radius: 4px; margin: 8px 0; }
+.actions-bar {
+  display: flex; gap: 10px;
+  margin-bottom: 20px;
+}
+{% endblock %}
+
+{% block content %}
+<div class="actions-bar">
+  <a href="{{ url_for('manuais.editar', manual_id=manual.id) }}" class="btn btn-outline btn-sm">Editar</a>
+  <form method="POST" action="{{ url_for('manuais.excluir', manual_id=manual.id) }}"
+        onsubmit="return confirm('Confirma exclusão deste manual?');">
+    <button type="submit" class="btn btn-sm" style="background:#fee2e2;color:#991b1b;border:1px solid #fca5a5;">Excluir</button>
+  </form>
+  <a href="{{ url_for('manuais.index') }}" class="btn btn-outline btn-sm">Voltar</a>
+</div>
+
+<div class="manual-meta">
+  <span>Categoria: <strong>{{ manual.categoria }}</strong></span>
+  <span>Atualizado: {{ manual.atualizado_em[:16].replace('T', ' ') }}</span>
+  {% if manual.autor %}<span>Por: {{ manual.autor }}</span>{% endif %}
+</div>
+
+<div class="manual-body">{{ manual.conteudo | safe }}</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+// Corrigir links de anexos (data: URL) para download direto
+document.querySelectorAll('.manual-body a[href^="data:"]').forEach(function(link) {
+  var name = link.textContent.replace('📎 ', '').trim();
+  link.setAttribute('download', name || 'arquivo');
+  link.style.cursor = 'pointer';
+});
+</script>
+{% endblock %}

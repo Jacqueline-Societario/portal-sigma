@@ -1,0 +1,476 @@
+{% extends "base.html" %}
+{% block title %}Elaboração de Procurações{% endblock %}
+{% block page_title %}Elaboração de Procurações{% endblock %}
+
+{% block extra_styles %}
+.form-card {
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 28px;
+  margin-bottom: 24px;
+}
+.form-card h2 {
+  font-size: 16px;
+  font-weight: 700;
+  margin-bottom: 20px;
+  color: var(--sigma-red);
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 10px;
+}
+.form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.form-group { margin-bottom: 16px; }
+.form-group label {
+  display: block; font-size: 13px; font-weight: 600;
+  color: #444; margin-bottom: 6px;
+}
+.form-group input,
+.form-group select,
+.form-group textarea {
+  width: 100%;
+  padding: 10px 14px;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  font-size: 14px;
+  font-family: inherit;
+  outline: none;
+  transition: border-color .15s;
+  resize: vertical;
+}
+.form-group input:focus,
+.form-group select:focus,
+.form-group textarea:focus { border-color: var(--sigma-red); }
+.required { color: var(--sigma-red); }
+.hint { font-size: 11px; color: #888; margin-top: 3px; }
+.actions { display: flex; gap: 12px; align-items: center; margin-top: 8px; }
+.spinner { display: none; }
+.spinner.ativo { display: inline-block; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.spin-icon {
+  width: 18px; height: 18px;
+  border: 2px solid rgba(255,255,255,.4);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: spin .6s linear infinite;
+  display: inline-block;
+  vertical-align: middle;
+}
+#resultado {
+  display: none;
+  background: #f0fdf4;
+  border: 1px solid #86efac;
+  border-radius: var(--radius);
+  padding: 20px;
+  margin-top: 20px;
+}
+#resultado h3 { color: #166534; margin-bottom: 12px; font-size: 15px; }
+#msg-erro {
+  display: none;
+  background: #fef2f2;
+  border: 1px solid #fca5a5;
+  border-radius: var(--radius);
+  padding: 14px;
+  color: #991b1b;
+  font-size: 14px;
+  margin-top: 16px;
+}
+{% endblock %}
+
+{% block content %}
+
+{% if modelos %}
+<div class="form-card" style="margin-bottom:28px;">
+  <h2 style="font-size:16px;font-weight:700;color:var(--sigma-red);border-bottom:1px solid var(--border);padding-bottom:10px;margin-bottom:18px;">
+    Modelos Padrão Sigma
+  </h2>
+  <p style="font-size:13px;color:#666;margin-bottom:16px;">Clique para baixar o modelo Word (.docx) para preenchimento.</p>
+  <div style="display:grid;gap:10px;">
+    {% for m in modelos %}
+    <a href="{{ url_for('procuracoes.baixar_modelo', arquivo=m.arquivo) }}"
+       style="display:flex;align-items:center;gap:12px;padding:12px 16px;
+              background:#f8f9fa;border:1px solid #e5e7eb;border-radius:8px;
+              text-decoration:none;color:inherit;transition:all .15s;"
+       onmouseover="this.style.borderColor='#A72C31';this.style.background='#fff';"
+       onmouseout="this.style.borderColor='#e5e7eb';this.style.background='#f8f9fa';">
+      <svg width="20" height="20" fill="none" stroke="#A72C31" stroke-width="2" viewBox="0 0 24 24">
+        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+        <polyline points="14 2 14 8 20 8"/>
+        <line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/>
+      </svg>
+      <div>
+        <div style="font-size:14px;font-weight:600;color:#111;">{{ m.nome }}</div>
+        <div style="font-size:12px;color:#888;margin-top:2px;">{{ m.descricao }}</div>
+      </div>
+      <span style="margin-left:auto;font-size:11px;font-weight:600;color:#A72C31;
+                   background:#fee2e2;padding:3px 8px;border-radius:4px;">Baixar</span>
+    </a>
+    {% endfor %}
+  </div>
+</div>
+{% endif %}
+
+<p style="color:#666; font-size:14px; margin-bottom:24px;">
+  Ou preencha os dados abaixo para a IA elaborar uma procuração personalizada.
+</p>
+
+<form id="form-procuracao">
+
+  <!-- Tipo -->
+  <div class="form-card">
+    <h2>Tipo de Procuração</h2>
+    <div class="form-group">
+      <label for="tipo">Tipo <span class="required">*</span></label>
+      <select id="tipo" name="tipo" required>
+        <option value="">— Selecione —</option>
+        {% if modelos %}
+        <optgroup label="── Modelos Padrão Sigma ──">
+          {% for m in modelos %}
+          <option value="{{ m.nome }}" data-modelo-sigma="true">{{ m.nome }}</option>
+          {% endfor %}
+        </optgroup>
+        {% endif %}
+        <optgroup label="── Tipos de Procuração ──">
+          {% for t in tipos %}
+          <option value="{{ t }}">{{ t }}</option>
+          {% endfor %}
+        </optgroup>
+      </select>
+    </div>
+    <div class="form-group" id="outro-tipo-group" style="display:none;">
+      <label for="tipo_outro">Descreva o tipo <span class="required">*</span></label>
+      <input type="text" id="tipo_outro" name="tipo_outro" placeholder="Descreva o tipo de procuração">
+    </div>
+    <div id="hint-modelo-sigma" style="display:none; margin-top:10px;
+         background:#f0f6ff; border:1px solid #bfdbfe; border-radius:6px; padding:10px 14px;
+         font-size:13px; color:#1d4ed8;">
+      <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"
+           viewBox="0 0 24 24" style="vertical-align:middle; margin-right:6px;">
+        <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/>
+        <line x1="12" y1="16" x2="12.01" y2="16"/>
+      </svg>
+      Modelo padrão Sigma selecionado. A IA preencherá os dados da empresa mantendo
+      a estrutura e redação originais.
+      <a href="#" style="margin-left:8px; color:#A72C31; font-weight:600; text-decoration:none;"
+         target="_blank">Baixar modelo em branco</a>
+    </div>
+  </div>
+
+  <!-- Outorgante -->
+  <div class="form-card">
+    <h2>Outorgante (quem concede os poderes)</h2>
+    <div class="form-row">
+      <div class="form-group">
+        <label for="outorgante_razao_social">Razão Social <span class="required">*</span></label>
+        <input type="text" id="outorgante_razao_social" name="outorgante_razao_social"
+               placeholder="Nome completo ou razão social da empresa">
+      </div>
+      <div class="form-group">
+        <label for="outorgante_cnpj">CNPJ</label>
+        <input type="text" id="outorgante_cnpj" name="outorgante_cnpj"
+               placeholder="00.000.000/0001-00">
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label for="outorgante_representante">Representante (quem assina)</label>
+        <input type="text" id="outorgante_representante" name="outorgante_representante"
+               placeholder="Ex: João Silva, brasileiro, administrador, CPF 000.000.000-00">
+        <div class="hint">Qualificação completa do representante da empresa (nome, nacionalidade, cargo, CPF).</div>
+      </div>
+      <div class="form-group">
+        <label for="vigencia">Vigência</label>
+        <input type="text" id="vigencia" name="vigencia"
+               placeholder="Ex: por prazo indeterminado, até 31/12/2026...">
+      </div>
+    </div>
+    <div class="form-group">
+      <label for="outorgante_qualificacao">Qualificação completa (opcional)</label>
+      <textarea id="outorgante_qualificacao" name="outorgante_qualificacao" rows="3"
+                placeholder="Se preenchida, substitui os campos acima. Ex: EMPRESA XYZ LTDA, pessoa jurídica de direito privado, CNPJ 00.000.000/0001-00, com sede em Goiânia/GO, representada por João Silva, CPF 000.000.000-00..."></textarea>
+      <div class="hint">Deixe em branco para usar os campos acima.</div>
+    </div>
+  </div>
+
+  <!-- Outorgado -->
+  <div class="form-card">
+    <h2>Outorgado (quem recebe os poderes)</h2>
+    <div style="margin-bottom:14px;">
+      <button type="button" id="btn-usar-bruno"
+              style="display:inline-flex;align-items:center;gap:8px;
+                     padding:8px 16px;background:#fff;border:1px solid #A72C31;
+                     border-radius:6px;color:#A72C31;font-size:13px;font-weight:600;
+                     cursor:pointer;transition:all .15s;"
+              onmouseover="this.style.background='#fee2e2'"
+              onmouseout="this.style.background='#fff'">
+        <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+          <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+          <circle cx="12" cy="7" r="4"/>
+        </svg>
+        Usar dados do Contador Sigma (Bruno)
+      </button>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label for="outorgado_nome">Nome <span class="required">*</span></label>
+        <input type="text" id="outorgado_nome" name="outorgado_nome"
+               placeholder="Nome completo ou razão social">
+      </div>
+      <div class="form-group">
+        <label for="outorgado_doc">CPF ou CNPJ</label>
+        <input type="text" id="outorgado_doc" name="outorgado_doc"
+               placeholder="000.000.000-00 ou 00.000.000/0001-00">
+      </div>
+    </div>
+    <div class="form-group">
+      <label for="outorgado_qualificacao">Qualificação completa (opcional)</label>
+      <textarea id="outorgado_qualificacao" name="outorgado_qualificacao" rows="3"
+                placeholder="Ex: Maria Souza, brasileira, advogada, OAB/GO 00000, CPF 000.000.000-00, residente em..."></textarea>
+      <div class="hint">Deixe em branco para usar os campos acima.</div>
+    </div>
+  </div>
+
+  <!-- Poderes -->
+  <div class="form-card">
+    <h2>Poderes e Informações Adicionais</h2>
+    <div class="form-group">
+      <label for="poderes">Poderes a serem concedidos <span class="required">*</span></label>
+      <textarea id="poderes" name="poderes" rows="10" required
+                placeholder="Descreva os poderes a serem concedidos. Ex: representar a empresa perante a Junta Comercial do Estado de Goiás, assinar documentos, requerer certidões, praticar todos os atos necessários ao cumprimento do mandato..."></textarea>
+      <div class="hint" id="hint-poderes-sigma" style="display:none;">
+        Poderes padrão da Procuração - Sigma pré-preenchidos. Edite se necessário.
+      </div>
+    </div>
+    <div class="form-group">
+      <label for="observacoes">Observações adicionais</label>
+      <textarea id="observacoes" name="observacoes" rows="2"
+                placeholder="Qualquer informação adicional relevante para a procuração..."></textarea>
+    </div>
+  </div>
+
+  <!-- Botão -->
+  <div class="actions">
+    <button type="submit" class="btn btn-primary" id="btn-gerar">
+      <span id="btn-label">Gerar Procuração</span>
+      <span class="spinner ativo" id="spinner" style="display:none;">
+        <span class="spin-icon"></span>
+      </span>
+    </button>
+    <span id="status-msg" style="font-size:13px; color:#666;"></span>
+  </div>
+
+</form>
+
+<div id="msg-erro"></div>
+
+<div id="resultado">
+  <h3>Procuração gerada com sucesso!</h3>
+  <p style="font-size:14px; color:#166534; margin-bottom:16px;">
+    Faça o download no formato desejado para revisar e finalizar.
+  </p>
+  <div style="display:flex;gap:12px;flex-wrap:wrap;">
+    <a id="link-docx" href="#" class="btn btn-primary">
+      &#128196; Baixar Word (.docx)
+    </a>
+    <a id="link-pdf" href="#" class="btn btn-outline" style="display:none;">
+      &#128196; Baixar PDF
+    </a>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+const BRUNO = {
+  nome: {{ bruno.nome | tojson }},
+  doc: {{ bruno.doc | tojson }},
+  qualificacao: {{ bruno.qualificacao | tojson }},
+};
+
+const tipoSelect = document.getElementById('tipo');
+const outroGroup = document.getElementById('outro-tipo-group');
+
+// Mapeamento nome do modelo → arquivo
+const MODELOS_SIGMA_MAP = {
+  {% for m in modelos %}'{{ m.nome }}': '{{ m.arquivo }}',
+  {% endfor %}
+};
+
+function getModeloArquivo() {
+  const opt = tipoSelect.options[tipoSelect.selectedIndex];
+  return (opt && opt.getAttribute('data-modelo-sigma') === 'true')
+    ? (MODELOS_SIGMA_MAP[tipoSelect.value] || '')
+    : '';
+}
+
+const PODERES_SIGMA = `PODERES OUTORGADOS: Assinar documentos referentes aos procedimentos abaixo relacionados, nos seguintes órgãos públicos: Junta Comercial do Estado, Receita Federal do Brasil, Secretaria da Economia do Estado – SEFAZ, Instituto Nacional da Previdência Social – INSS, Caixa Econômica Federal, Fórum, Ministério do Trabalho, Procuradoria Geral da Fazenda, Prefeitura Municipal e suas Secretarias, como Agência Municipal do Meio Ambiente, Vigilância Sanitária e outras, Agência Nacional do Petróleo, Gás Natural e Biocombustíveis – ANP, Agência Nacional de Vigilância Sanitária – ANVISA, Sindicatos, Corpo de Bombeiros, Conselhos Profissionais ou em qualquer outro órgão público não citado e necessários para o bom e fiel cumprimento do presente mandato, conforme § 1° e 2°, artigo 654 do Código Civil, para:
+
+Assinar requerimentos para abertura de processos de Constituição, Baixa de Empresa, Paralisação/Suspensão das Atividades, Alteração Contratual perante a Junta Comercial do Estado, Receita Federal do Brasil, Secretária de Estado da Economia – SEFAZ, Prefeituras e suas Secretarias.
+
+Solicitar, protocolar e assinar inclusão e exclusão de contador e retirar certidões de qualquer natureza;
+
+Assinar e protocolar em recursos e defesas, bem como dar vistas em processos em nome da empresa;
+
+Solicitar, requerer, protocolar, retirar e juntar documentos, bem como assinar em processos e requerimentos de Parcelamentos Fiscais;
+
+Perante o Ministério do Trabalho, Receita Federal, Previdência Social e INSS: dar entrada, registrar/cadastrar senhas e solicitar segunda via de RAIS, CAGED, GEFIP/SEFIP, relatórios de FGTS pagos ou em aberto, resolver pendências quanto ao seguro-desemprego dos funcionários da empresa, e o que mais for necessário para solução de problemas na área de Recursos Humanos/Pessoal;
+
+Perante a Caixa Econômica Federal: RDT / RDE / DCN e todos os serviços relacionados a cadastro, apuração de inconsistências, débitos, apresentação e solicitação de documentos;
+
+Dar entrada e assinar processos de Retificações de Imposto de Renda, PERDCOMP, incluindo pegar relatórios destes junto à Receita Federal;
+
+Cadastrar senhas e acessos eletrônicos perante a Receita Federal, Secretaria de Estado da Economia – SEFAZ e na Prefeitura para REST, DMS etc.
+
+Solicitar emissão, correção ou cancelamento de Nota Fiscal Avulsa da Secretaria de Estado da Economia – SEFAZ e Nota Fiscal de Serviço Avulsa perante à Prefeitura Municipal;
+
+Retirar, solicitar, protocolar e dar vistas em processos de Alvarás e Licenças dos órgãos públicos, quais sejam, Corpo de Bombeiros, Vigilância Sanitária Municipal e Estadual, Agência ou Secretaria Ambiental Municipal e Estadual, bem como quaisquer outras licenças, alvarás e autorizações de Prefeitura.
+
+Abrangendo a matriz e todas as filiais da empresa.
+
+Este instrumento será válido por tempo indeterminado, responsabilizando-se os outorgados por todos os atos praticados no cumprimento deste.`;
+
+tipoSelect.addEventListener('change', function() {
+  outroGroup.style.display = this.value === 'Outro (descrever)' ? 'block' : 'none';
+
+  // Hint visual quando modelo Sigma é selecionado
+  const hint = document.getElementById('hint-modelo-sigma');
+  const arq = getModeloArquivo();
+  if (arq && hint) {
+    hint.style.display = 'block';
+    hint.querySelector('a').href = '/procuracoes/modelo/' + arq;
+  } else if (hint) {
+    hint.style.display = 'none';
+  }
+
+  // Pré-preencher poderes padrão quando "Procuração - Sigma" é selecionada
+  const poderesField = document.getElementById('poderes');
+  const hintPoderes = document.getElementById('hint-poderes-sigma');
+  if (this.value === 'Procuração - Sigma') {
+    poderesField.value = PODERES_SIGMA;
+    if (hintPoderes) hintPoderes.style.display = 'block';
+  } else {
+    // Só limpar se o conteúdo atual for o padrão Sigma (não limpar edições manuais de outros tipos)
+    if (poderesField.value === PODERES_SIGMA) poderesField.value = '';
+    if (hintPoderes) hintPoderes.style.display = 'none';
+  }
+});
+
+// Botão "Usar dados do Contador Sigma (Bruno)"
+document.getElementById('btn-usar-bruno').addEventListener('click', function() {
+  document.getElementById('outorgado_nome').value = BRUNO.nome;
+  document.getElementById('outorgado_doc').value = BRUNO.doc;
+  document.getElementById('outorgado_qualificacao').value = BRUNO.qualificacao;
+
+  // Feedback visual
+  const btn = this;
+  const textoOriginal = btn.innerHTML;
+  btn.innerHTML = btn.innerHTML.replace('Usar dados do Contador Sigma (Bruno)', 'Dados preenchidos!');
+  btn.style.borderColor = '#16a34a';
+  btn.style.color = '#16a34a';
+  btn.style.background = '#f0fdf4';
+  setTimeout(() => {
+    btn.innerHTML = textoOriginal;
+    btn.style.borderColor = '#A72C31';
+    btn.style.color = '#A72C31';
+    btn.style.background = '#fff';
+  }, 2000);
+});
+
+let _gerando = false;
+
+document.getElementById('form-procuracao').addEventListener('submit', async function(e) {
+  e.preventDefault();
+  if (_gerando) return;
+
+  const btn = document.getElementById('btn-gerar');
+  const spinner = document.getElementById('spinner');
+  const status = document.getElementById('status-msg');
+  const resultado = document.getElementById('resultado');
+  const msgErro = document.getElementById('msg-erro');
+
+  _gerando = true;
+  btn.disabled = true;
+  spinner.style.display = 'inline-block';
+  resultado.style.display = 'none';
+  msgErro.style.display = 'none';
+
+  // Mensagens de progresso para manter o usuário informado
+  const msgs = [
+    'Processando dados do formulário...',
+    'Consultando a IA... aguarde.',
+    'Redigindo o documento jurídico...',
+    'Quase pronto, finalizando...',
+  ];
+  let msgIdx = 0;
+  status.textContent = msgs[msgIdx];
+  const progressTimer = setInterval(() => {
+    msgIdx = Math.min(msgIdx + 1, msgs.length - 1);
+    status.textContent = msgs[msgIdx];
+  }, 8000);
+
+  let tipoFinal = tipoSelect.value;
+  if (tipoFinal === 'Outro (descrever)') {
+    tipoFinal = document.getElementById('tipo_outro').value.trim() || 'Procuração';
+  }
+
+  const dados = {
+    tipo: tipoFinal,
+    modelo_arquivo: getModeloArquivo(),
+    outorgante_razao_social:  document.getElementById('outorgante_razao_social').value.trim(),
+    outorgante_cnpj:          document.getElementById('outorgante_cnpj').value.trim(),
+    outorgante_representante: document.getElementById('outorgante_representante').value.trim(),
+    outorgante_qualificacao:  document.getElementById('outorgante_qualificacao').value.trim(),
+    outorgado_nome:           document.getElementById('outorgado_nome').value.trim(),
+    outorgado_doc:            document.getElementById('outorgado_doc').value.trim(),
+    outorgado_qualificacao:   document.getElementById('outorgado_qualificacao').value.trim(),
+    poderes:                  document.getElementById('poderes').value.trim(),
+    vigencia:                 document.getElementById('vigencia').value.trim(),
+    observacoes:              document.getElementById('observacoes').value.trim(),
+  };
+
+  // Timeout de 3 minutos no fetch (segurança caso o proxy corte a conexão)
+  const controller = new AbortController();
+  const fetchTimeout = setTimeout(() => controller.abort(), 180000);
+
+  try {
+    const resp = await fetch('/procuracoes/gerar', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify(dados),
+      signal: controller.signal,
+    });
+    clearTimeout(fetchTimeout);
+    const json = await resp.json();
+
+    if (json.erro) {
+      msgErro.textContent = json.erro;
+      msgErro.style.display = 'block';
+    } else {
+      document.getElementById('link-docx').href = `/procuracoes/download/${json.token}/docx`;
+      const linkPdf = document.getElementById('link-pdf');
+      if (json.pdf_ok) {
+        linkPdf.href = `/procuracoes/download/${json.token}/pdf`;
+        linkPdf.style.display = 'inline-flex';
+      } else {
+        linkPdf.style.display = 'none';
+      }
+      resultado.style.display = 'block';
+      resultado.scrollIntoView({behavior: 'smooth', block: 'center'});
+    }
+  } catch(err) {
+    clearTimeout(fetchTimeout);
+    if (err.name === 'AbortError') {
+      msgErro.textContent = 'O tempo limite foi atingido (3 minutos). Tente novamente ou simplifique os campos.';
+    } else {
+      msgErro.textContent = 'Erro de conexão. Verifique sua internet e tente novamente.';
+    }
+    msgErro.style.display = 'block';
+  } finally {
+    clearInterval(progressTimer);
+    _gerando = false;
+    btn.disabled = false;
+    spinner.style.display = 'none';
+    status.textContent = '';
+  }
+});
+</script>
+{% endblock %}

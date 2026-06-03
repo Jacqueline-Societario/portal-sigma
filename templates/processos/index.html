@@ -1,0 +1,700 @@
+{% extends "base.html" %}
+{% block title %}Processos em Andamento{% endblock %}
+{% block page_title %}Processos em Andamento{% endblock %}
+
+{% block extra_styles %}
+/* ── Tabs ─────────────────────────────────────────────────── */
+.tabs-bar {
+  display: flex;
+  gap: 4px;
+  border-bottom: 2px solid var(--border);
+  margin-bottom: 24px;
+}
+.tab-btn {
+  padding: 10px 20px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--muted);
+  background: none;
+  border: none;
+  border-bottom: 3px solid transparent;
+  margin-bottom: -2px;
+  cursor: pointer;
+  transition: color .15s, border-color .15s;
+  text-decoration: none;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.tab-btn:hover { color: var(--sigma-red); }
+.tab-btn.active {
+  color: var(--sigma-red);
+  border-bottom-color: var(--sigma-red);
+}
+.tab-count {
+  background: var(--sigma-light);
+  color: var(--sigma-red);
+  font-size: 11px;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 99px;
+  min-width: 22px;
+  text-align: center;
+}
+.tab-btn:not(.active) .tab-count {
+  background: #f3f4f6;
+  color: #9ca3af;
+}
+
+/* ── Processo card ────────────────────────────────────────── */
+.processo-card {
+  background: var(--white);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  margin-bottom: 14px;
+  box-shadow: var(--shadow);
+  overflow: hidden;
+}
+.processo-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  padding: 16px 20px;
+  cursor: pointer;
+  gap: 16px;
+  user-select: none;
+}
+.processo-header:hover { background: #fafafa; }
+.processo-info { flex: 1; min-width: 0; }
+.processo-tipo {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--muted);
+  margin-bottom: 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.processo-razao-social {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text);
+  margin-bottom: 4px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.processo-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+  font-size: 12px;
+  color: var(--muted);
+}
+.processo-meta span { display: flex; align-items: center; gap: 4px; }
+
+.status-badge {
+  font-size: 11px;
+  font-weight: 700;
+  padding: 3px 10px;
+  border-radius: 99px;
+  white-space: nowrap;
+}
+.status-Novo              { background: #eff6ff; color: #1d4ed8; }
+.status-Em_analise        { background: #fef3c7; color: #92400e; }
+.status-Pendente_cliente  { background: #fff7ed; color: #c2410c; }
+.status-Aguardando_assinatura { background: #f5f3ff; color: #6d28d9; }
+.status-Aguardando_protocolo  { background: #fdf2f8; color: #9d174d; }
+.status-Em_exigencia      { background: #fef2f2; color: #991b1b; }
+.status-Concluido         { background: #f0fdf4; color: #166534; }
+.status-Arquivado         { background: #f3f4f6; color: #6b7280; }
+
+.chevron-icon {
+  width: 18px;
+  height: 18px;
+  color: var(--muted);
+  flex-shrink: 0;
+  transition: transform .2s;
+  margin-top: 2px;
+}
+.processo-card.open .chevron-icon { transform: rotate(180deg); }
+
+/* ── Processo body ────────────────────────────────────────── */
+.processo-body {
+  display: none;
+  border-top: 1px solid var(--border);
+}
+.processo-card.open .processo-body { display: block; }
+
+.processo-section {
+  padding: 18px 20px;
+  border-bottom: 1px solid #f3f4f6;
+}
+.processo-section:last-child { border-bottom: none; }
+.section-title {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: var(--muted);
+  margin-bottom: 12px;
+}
+
+/* ── Respostas ────────────────────────────────────────────── */
+.respostas-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 12px;
+}
+.resposta-item {}
+.resposta-pergunta {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--muted);
+  margin-bottom: 3px;
+  line-height: 1.4;
+}
+.resposta-texto {
+  font-size: 13px;
+  color: var(--text);
+  line-height: 1.5;
+  white-space: pre-line;
+}
+
+/* ── Controles ────────────────────────────────────────────── */
+.controles-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  align-items: flex-end;
+}
+.campo-group {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+.campo-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: .5px;
+}
+.campo-select {
+  padding: 7px 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+  color: var(--text);
+  background: var(--white);
+  cursor: pointer;
+  min-width: 180px;
+  outline: none;
+  transition: border-color .15s;
+}
+.campo-select:focus { border-color: var(--sigma-red); }
+
+/* ── Observações ──────────────────────────────────────────── */
+.obs-wrap { display: flex; flex-direction: column; gap: 8px; }
+.obs-textarea {
+  width: 100%;
+  min-height: 100px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+  color: var(--text);
+  font-family: inherit;
+  resize: vertical;
+  line-height: 1.6;
+  outline: none;
+  transition: border-color .15s;
+  background: #fafafa;
+}
+.obs-textarea:focus {
+  border-color: var(--sigma-red);
+  background: var(--white);
+}
+.obs-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.obs-editado {
+  font-size: 11px;
+  color: var(--muted);
+  font-style: italic;
+}
+.obs-salvo {
+  font-size: 11px;
+  color: #166534;
+  display: none;
+}
+
+/* ── Ações ────────────────────────────────────────────────── */
+.acoes-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  padding: 14px 20px;
+  background: #fafafa;
+  border-top: 1px solid var(--border);
+}
+.btn-arquivar {
+  background: #fef2f2;
+  color: #991b1b;
+  border: 1px solid #fca5a5;
+}
+.btn-arquivar:hover { background: #fee2e2; }
+.btn-reativar {
+  background: #f0fdf4;
+  color: #166534;
+  border: 1px solid #86efac;
+}
+.btn-reativar:hover { background: #dcfce7; }
+.btn-pdf {
+  background: var(--white);
+  color: var(--sigma-red);
+  border: 1px solid var(--sigma-red);
+}
+.btn-pdf:hover { background: var(--sigma-light); }
+.btn-pdf-disabled {
+  background: #f9fafb;
+  color: #d1d5db;
+  border: 1px solid #e5e7eb;
+  cursor: not-allowed;
+}
+.btn-pdf-disabled:hover { background: #f9fafb; }
+
+/* ── Paginação ────────────────────────────────────────────── */
+.paginacao {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  margin-top: 24px;
+  flex-wrap: wrap;
+}
+.pag-btn {
+  padding: 7px 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+  background: var(--white);
+  cursor: pointer;
+  text-decoration: none;
+  transition: all .15s;
+}
+.pag-btn:hover { border-color: var(--sigma-red); color: var(--sigma-red); }
+.pag-btn.current {
+  background: var(--sigma-red);
+  color: #fff;
+  border-color: var(--sigma-red);
+  cursor: default;
+}
+.pag-info { font-size: 13px; color: var(--muted); padding: 0 8px; }
+
+/* ── Vazio ────────────────────────────────────────────────── */
+.vazio {
+  text-align: center;
+  padding: 56px 20px;
+  color: var(--muted);
+}
+.vazio-icon { font-size: 40px; margin-bottom: 12px; }
+.vazio-msg  { font-size: 15px; font-weight: 600; color: var(--text); margin-bottom: 6px; }
+.vazio-sub  { font-size: 13px; }
+
+/* ── Toast ────────────────────────────────────────────────── */
+.toast {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  background: #1a1a1a;
+  color: #fff;
+  padding: 12px 20px;
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 600;
+  z-index: 9999;
+  opacity: 0;
+  transform: translateY(10px);
+  transition: opacity .25s, transform .25s;
+  pointer-events: none;
+}
+.toast.show { opacity: 1; transform: translateY(0); }
+.toast.erro { background: #991b1b; }
+{% endblock %}
+
+{% block content %}
+<!-- Header da página -->
+<div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:20px; flex-wrap:wrap; gap:12px;">
+  <div>
+    <h2 style="font-size:18px; font-weight:800; color:var(--text); margin-bottom:4px;">Processos em Andamento</h2>
+    <p style="font-size:13px; color:var(--muted);">Respostas recebidas via Google Forms organizadas como processos internos.</p>
+  </div>
+  <div style="display:flex; gap:10px; flex-wrap:wrap;">
+    {% if session.get('is_admin') %}
+    <a href="{{ url_for('processos.admin_formularios') }}" class="btn btn-outline btn-sm">
+      Gerenciar Formulários
+    </a>
+    {% endif %}
+  </div>
+</div>
+
+<!-- Abas -->
+<div class="tabs-bar">
+  <a href="{{ url_for('processos.index', aba='ativos', page=1) }}"
+     class="tab-btn {% if aba == 'ativos' %}active{% endif %}">
+    Processos Ativos
+    <span class="tab-count">{{ total_ativos }}</span>
+  </a>
+  <a href="{{ url_for('processos.index', aba='arquivados', page=1) }}"
+     class="tab-btn {% if aba == 'arquivados' %}active{% endif %}">
+    Processos Arquivados
+    <span class="tab-count">{{ total_arquivados }}</span>
+  </a>
+</div>
+
+<!-- Lista de processos -->
+{% if processos %}
+  {% for p in processos %}
+  {%- set ns = namespace(razao_social='') -%}
+  {%- set is_alteracao = 'alteração contratual' in (p.tipo_processo or p.form_name or '')|lower -%}
+  {%- if is_alteracao -%}
+    {# Alteração Contratual: nome vem do campo "Informe o nome da empresa que estamos alterando." #}
+    {%- for r in p.respostas -%}{%- if 'informe o nome da empresa' in r.pergunta|lower and not ns.razao_social -%}{%- set ns.razao_social = r.resposta -%}{%- endif -%}{%- endfor -%}
+  {%- else -%}
+    {# Outros formulários: nome vem do campo "Razão Social" (excluindo perguntas do tipo "Haverá...") #}
+    {%- for r in p.respostas -%}{%- if 'razão social' in r.pergunta|lower and 'haverá' not in r.pergunta|lower and not ns.razao_social -%}{%- set ns.razao_social = r.resposta -%}{%- endif -%}{%- endfor -%}
+  {%- endif -%}
+  <div class="processo-card" id="processo-{{ p.id }}">
+
+    <!-- Cabeçalho clicável -->
+    <div class="processo-header" onclick="toggleProcesso({{ p.id }})">
+      <div class="processo-info">
+        <div class="processo-tipo">{{ p.tipo_processo or p.form_name or 'Formulário' }}</div>
+        {% if ns.razao_social %}
+        <div class="processo-razao-social">{{ ns.razao_social }}</div>
+        {% endif %}
+        <div class="processo-meta">
+          {% if p.enviado_por %}
+          <span>
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+            {{ p.enviado_por }}
+          </span>
+          {% endif %}
+          <span>
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+            {{ (p.data_envio or p.criado_em or '')[:16] }}
+          </span>
+          {% if p.responsavel_nome %}
+          <span>
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+            {{ p.responsavel_nome }}
+          </span>
+          {% endif %}
+        </div>
+      </div>
+      <div style="display:flex; align-items:center; gap:10px; flex-shrink:0;">
+        {% set status_cls = p.status|replace(' ','_')|replace('é','e')|replace('ê','e')|replace('ã','a') %}
+        <span class="status-badge status-{{ status_cls }}">{{ p.status }}</span>
+        <svg class="chevron-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <polyline points="6 9 12 15 18 9"></polyline>
+        </svg>
+      </div>
+    </div>
+
+    <!-- Corpo (expandido) -->
+    <div class="processo-body">
+
+      <!-- Respostas do formulário (apenas campos principais) -->
+      {% if p.respostas %}
+      <div class="processo-section">
+        <div class="section-title">Respostas do Formulário</div>
+        <div class="respostas-grid">
+          {% for r in p.respostas %}
+          {%- set perg = r.pergunta|lower -%}
+          {%- if is_alteracao -%}
+            {# Alteração Contratual: mostrar apenas e-mail e perguntas "Haverá alteração de..." #}
+            {%- set mostrar = 'e-mail' in perg or 'email' in perg or perg.startswith('haverá alteração de') -%}
+          {%- else -%}
+            {# Outros formulários: mostrar e-mail, razão social, atividade, sede, tamanho #}
+            {%- set mostrar = 'e-mail' in perg or 'email' in perg or ('razão social' in perg and 'haverá' not in perg) or 'atividade' in perg or 'sede' in perg or 'tamanho' in perg -%}
+          {%- endif -%}
+          {% if mostrar %}
+          <div class="resposta-item">
+            <div class="resposta-pergunta">{{ r.pergunta }}</div>
+            <div class="resposta-texto">{{ r.resposta or '—' }}</div>
+          </div>
+          {% endif %}
+          {% endfor %}
+        </div>
+      </div>
+      {% endif %}
+
+      <!-- Controles: status + responsável -->
+      <div class="processo-section">
+        <div class="section-title">Controles</div>
+        <div class="controles-row">
+          <div class="campo-group">
+            <label class="campo-label">Status</label>
+            <select class="campo-select" id="status-{{ p.id }}"
+                    onchange="atualizarStatus({{ p.id }}, this.value)">
+              {% for s in status_opcoes %}
+              <option value="{{ s }}" {% if p.status == s %}selected{% endif %}>{{ s }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="campo-group">
+            <label class="campo-label">Responsável</label>
+            <select class="campo-select" id="resp-{{ p.id }}"
+                    onchange="atualizarResponsavel({{ p.id }}, this.value)">
+              <option value="">— Sem responsável —</option>
+              {% for u in usuarios %}
+              <option value="{{ u.id }}" {% if p.responsavel_id == u.id %}selected{% endif %}>{{ u.nome }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          {% if p.form_name %}
+          <div class="campo-group">
+            <label class="campo-label">Formulário de origem</label>
+            <span style="font-size:13px; color:var(--muted); padding:7px 0;">{{ p.form_name }}</span>
+          </div>
+          {% endif %}
+        </div>
+      </div>
+
+      <!-- Observações -->
+      <div class="processo-section">
+        <div class="section-title">Observações do Processo</div>
+        <div class="obs-wrap">
+          <textarea class="obs-textarea" id="obs-{{ p.id }}"
+                    placeholder="Registre pendências, resumos, links, atualizações e informações importantes sobre o andamento deste processo...">{{ p.observacoes or '' }}</textarea>
+          <div class="obs-footer">
+            <div>
+              {% if p.observacoes_atualizadas_em %}
+              <span class="obs-editado">
+                Última edição: {{ (p.observacoes_atualizadas_em or '')[:16] }}
+                {% if p.observacoes_atualizadas_por_nome %}por {{ p.observacoes_atualizadas_por_nome }}{% endif %}
+              </span>
+              {% endif %}
+              <span class="obs-salvo" id="obs-salvo-{{ p.id }}">Salvo.</span>
+            </div>
+            <button class="btn btn-primary btn-sm" onclick="salvarObservacoes({{ p.id }})">
+              Salvar Observações
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Ações -->
+      <div class="acoes-row">
+        <a href="{{ url_for('processos.baixar_pdf', processo_id=p.id) }}"
+           class="btn btn-pdf btn-sm"
+           title="Baixar PDF desta resposta">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+            <polyline points="14 2 14 8 20 8"/>
+            <line x1="16" y1="13" x2="8" y2="13"/>
+            <line x1="16" y1="17" x2="8" y2="17"/>
+            <polyline points="10 9 9 9 8 9"/>
+          </svg>
+          Baixar PDF
+        </a>
+
+        {% if aba == 'ativos' %}
+        <button class="btn btn-arquivar btn-sm" onclick="arquivar({{ p.id }})">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="21 8 21 21 3 21 3 8"/>
+            <rect x="1" y="3" width="22" height="5"/>
+            <line x1="10" y1="12" x2="14" y2="12"/>
+          </svg>
+          Arquivar
+        </button>
+        {% else %}
+        <button class="btn btn-reativar btn-sm" onclick="reativar({{ p.id }})">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="1 4 1 10 7 10"/>
+            <path d="M3.51 15a9 9 0 1 0 .49-8.97"/>
+          </svg>
+          Reativar
+        </button>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+  {% endfor %}
+
+  <!-- Paginação -->
+  {% if total_pages > 1 %}
+  <div class="paginacao">
+    {% if page > 1 %}
+    <a href="{{ url_for('processos.index', aba=aba, page=page-1) }}" class="pag-btn">&#8592; Anterior</a>
+    {% endif %}
+
+    {% for p_num in range(1, total_pages + 1) %}
+      {% if p_num == page %}
+        <span class="pag-btn current">{{ p_num }}</span>
+      {% elif p_num == 1 or p_num == total_pages or (p_num >= page - 2 and p_num <= page + 2) %}
+        <a href="{{ url_for('processos.index', aba=aba, page=p_num) }}" class="pag-btn">{{ p_num }}</a>
+      {% elif p_num == page - 3 or p_num == page + 3 %}
+        <span class="pag-info">...</span>
+      {% endif %}
+    {% endfor %}
+
+    {% if page < total_pages %}
+    <a href="{{ url_for('processos.index', aba=aba, page=page+1) }}" class="pag-btn">Próxima &#8594;</a>
+    {% endif %}
+  </div>
+  <div style="text-align:center; margin-top:10px; font-size:12px; color:var(--muted);">
+    {{ total }} processo{{ 's' if total != 1 else '' }} no total
+  </div>
+  {% endif %}
+
+{% else %}
+  <!-- Estado vazio -->
+  <div class="vazio">
+    <div class="vazio-icon">
+      {% if aba == 'arquivados' %}
+        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#d1d5db" stroke-width="1.5"><polyline points="21 8 21 21 3 21 3 8"/><rect x="1" y="3" width="22" height="5"/><line x1="10" y1="12" x2="14" y2="12"/></svg>
+      {% else %}
+        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#d1d5db" stroke-width="1.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+      {% endif %}
+    </div>
+    <div class="vazio-msg">
+      {% if aba == 'arquivados' %}Nenhum processo arquivado{% else %}Nenhum processo em andamento{% endif %}
+    </div>
+    <div class="vazio-sub">
+      {% if aba == 'ativos' %}
+        Os processos criados a partir de respostas de Google Forms aparecerão aqui.
+      {% else %}
+        Processos arquivados aparecerão aqui para consulta.
+      {% endif %}
+    </div>
+  </div>
+{% endif %}
+
+<!-- Toast de feedback -->
+<div class="toast" id="toast"></div>
+
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+// ── Toggle do card ─────────────────────────────────────────────────────────
+function toggleProcesso(id) {
+  const card = document.getElementById('processo-' + id);
+  card.classList.toggle('open');
+}
+
+// ── Auto-abrir processo por hash ──────────────────────────────────────────
+(function() {
+  const hash = window.location.hash;
+  if (hash && hash.startsWith('#processo-')) {
+    const id = hash.replace('#processo-', '');
+    const card = document.getElementById('processo-' + id);
+    if (card) {
+      card.classList.add('open');
+      setTimeout(() => card.scrollIntoView({ behavior: 'smooth', block: 'start' }), 200);
+    }
+  }
+})();
+
+// ── Toast ──────────────────────────────────────────────────────────────────
+function mostrarToast(msg, erro) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast show' + (erro ? ' erro' : '');
+  clearTimeout(t._to);
+  t._to = setTimeout(() => { t.className = 'toast'; }, 2800);
+}
+
+// ── Atualizar status ───────────────────────────────────────────────────────
+function atualizarStatus(id, status) {
+  fetch('/processos/' + id + '/status', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ status: status })
+  })
+  .then(r => r.json())
+  .then(d => {
+    if (d.ok) mostrarToast('Status atualizado.');
+    else mostrarToast(d.erro || 'Erro ao atualizar.', true);
+  })
+  .catch(() => mostrarToast('Erro de conexão.', true));
+}
+
+// ── Atualizar responsável ──────────────────────────────────────────────────
+function atualizarResponsavel(id, respId) {
+  fetch('/processos/' + id + '/responsavel', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ responsavel_id: respId || null })
+  })
+  .then(r => r.json())
+  .then(d => {
+    if (d.ok) mostrarToast('Responsável atualizado.');
+    else mostrarToast(d.erro || 'Erro ao atualizar.', true);
+  })
+  .catch(() => mostrarToast('Erro de conexão.', true));
+}
+
+// ── Salvar observações ─────────────────────────────────────────────────────
+function salvarObservacoes(id) {
+  const texto = document.getElementById('obs-' + id).value;
+  const salvoBadge = document.getElementById('obs-salvo-' + id);
+  fetch('/processos/' + id + '/observacoes', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ observacoes: texto })
+  })
+  .then(r => r.json())
+  .then(d => {
+    if (d.ok) {
+      mostrarToast('Observações salvas.');
+      if (salvoBadge) {
+        salvoBadge.style.display = 'inline';
+        setTimeout(() => { salvoBadge.style.display = 'none'; }, 3000);
+      }
+    } else {
+      mostrarToast(d.erro || 'Erro ao salvar.', true);
+    }
+  })
+  .catch(() => mostrarToast('Erro de conexão.', true));
+}
+
+// ── Arquivar ───────────────────────────────────────────────────────────────
+function arquivar(id) {
+  if (!confirm('Arquivar este processo? Ele poderá ser consultado na aba "Processos Arquivados".')) return;
+  fetch('/processos/' + id + '/arquivar', { method: 'POST' })
+  .then(r => r.json())
+  .then(d => {
+    if (d.ok) {
+      mostrarToast('Processo arquivado.');
+      setTimeout(() => window.location.reload(), 900);
+    } else {
+      mostrarToast(d.erro || 'Erro ao arquivar.', true);
+    }
+  })
+  .catch(() => mostrarToast('Erro de conexão.', true));
+}
+
+// ── Reativar ───────────────────────────────────────────────────────────────
+function reativar(id) {
+  fetch('/processos/' + id + '/reativar', { method: 'POST' })
+  .then(r => r.json())
+  .then(d => {
+    if (d.ok) {
+      mostrarToast('Processo reativado.');
+      setTimeout(() => window.location.reload(), 900);
+    } else {
+      mostrarToast(d.erro || 'Erro ao reativar.', true);
+    }
+  })
+  .catch(() => mostrarToast('Erro de conexão.', true));
+}
+</script>
+{% endblock %}

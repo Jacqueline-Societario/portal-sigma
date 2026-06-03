@@ -1,0 +1,1280 @@
+{% extends "base.html" %}
+{% block title %}Consulta de Empresas{% endblock %}
+{% block page_title %}Consulta de Empresas{% endblock %}
+
+{% block extra_styles %}
+/* ── Busca geral ─────────────────────────────────────────── */
+.emp-search-bar {
+  position: relative;
+  margin-bottom: 14px;
+}
+.emp-search-bar input {
+  width: 100%;
+  padding: 11px 16px 11px 42px;
+  border: 1.5px solid var(--border);
+  border-radius: 10px;
+  font-size: 14px;
+  background: var(--white);
+  outline: none;
+  box-shadow: var(--shadow);
+  transition: border-color .15s, box-shadow .15s;
+  color: var(--text);
+}
+.emp-search-bar input:focus {
+  border-color: var(--sigma-red);
+  box-shadow: 0 0 0 3px rgba(167,44,49,0.08);
+}
+.emp-search-bar input::placeholder { color: #aaa; }
+.emp-search-icon {
+  position: absolute;
+  left: 14px; top: 50%;
+  transform: translateY(-50%);
+  color: #aaa;
+}
+
+/* ── Abas ───────────────────────────────────────────────── */
+.filter-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  margin-bottom: 12px;
+}
+.filter-pill {
+  padding: 6px 16px;
+  border-radius: 99px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  border: 1.5px solid var(--border);
+  background: var(--white);
+  color: var(--muted);
+  text-decoration: none;
+  transition: all .15s;
+}
+.filter-pill:hover { border-color: var(--sigma-red); color: var(--sigma-red); }
+.filter-pill.active {
+  background: var(--sigma-red);
+  border-color: var(--sigma-red);
+  color: #fff;
+}
+
+/* ── Botões de ação (toggle filtros, exportação) ─────────── */
+.action-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  margin-bottom: 14px;
+}
+.btn-toggle-filtros {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 16px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  border: 1.5px solid var(--border);
+  background: var(--white);
+  color: var(--muted);
+  transition: all .15s;
+}
+.btn-toggle-filtros:hover,
+.btn-toggle-filtros.has-active {
+  border-color: var(--sigma-red);
+  color: var(--sigma-red);
+  background: #fff3f3;
+}
+.btn-toggle-filtros .badge-count {
+  background: var(--sigma-red);
+  color: #fff;
+  border-radius: 99px;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 1px 7px;
+  min-width: 20px;
+  text-align: center;
+}
+.btn-export {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 14px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  text-decoration: none;
+  transition: all .15s;
+  border: 1.5px solid;
+}
+.btn-export-lista {
+  border-color: #d1fae5;
+  background: #f0fdf4;
+  color: #065f46;
+}
+.btn-export-lista:hover { background: #d1fae5; }
+.btn-export-relatorio {
+  border-color: #dbeafe;
+  background: #eff6ff;
+  color: #1e40af;
+}
+.btn-export-relatorio:hover { background: #dbeafe; }
+.btn-export-relatorio.bloqueado {
+  border-color: #e5e7eb;
+  background: #f9fafb;
+  color: #9ca3af;
+  cursor: not-allowed;
+}
+.ml-auto { margin-left: auto; }
+
+/* ── Painel de filtros avançados ────────────────────────── */
+.filtros-panel {
+  background: var(--white);
+  border: 1.5px solid var(--border);
+  border-radius: 12px;
+  padding: 20px 20px 16px;
+  margin-bottom: 16px;
+  box-shadow: var(--shadow);
+}
+.filtros-panel-title {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .8px;
+  color: var(--muted);
+  margin-bottom: 16px;
+}
+.filtros-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+/* ── Dropdown de filtro tipo planilha ───────────────────── */
+.fd-container {
+  position: relative;
+}
+.fd-label {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: .6px;
+  margin-bottom: 4px;
+  display: block;
+}
+.fd-btn {
+  width: 100%;
+  padding: 7px 10px;
+  border: 1.5px solid var(--border);
+  border-radius: 8px;
+  font-size: 13px;
+  color: var(--text);
+  background: var(--white);
+  cursor: pointer;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  text-align: left;
+  transition: border-color .15s;
+  gap: 6px;
+  overflow: hidden;
+}
+.fd-btn:hover { border-color: var(--sigma-red); }
+.fd-btn.ativo {
+  border-color: var(--sigma-red);
+  background: #fff3f3;
+  color: var(--sigma-red);
+  font-weight: 600;
+}
+.fd-btn-text {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 12px;
+}
+.fd-btn-arrow {
+  color: #9ca3af;
+  flex-shrink: 0;
+  font-size: 10px;
+  transition: transform .2s;
+}
+.fd-btn.aberto .fd-btn-arrow { transform: rotate(180deg); }
+.fd-count-badge {
+  background: var(--sigma-red);
+  color: #fff;
+  border-radius: 99px;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 1px 6px;
+  flex-shrink: 0;
+}
+
+.fd-panel {
+  display: none;
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  z-index: 9999;
+  background: #fff;
+  border: 1.5px solid var(--border);
+  border-radius: 10px;
+  box-shadow: 0 8px 30px rgba(0,0,0,.12);
+  min-width: 230px;
+  max-width: 280px;
+  overflow: hidden;
+}
+.fd-panel.aberto { display: block; }
+
+.fd-search-wrap {
+  padding: 8px 10px 6px;
+  border-bottom: 1px solid var(--border);
+}
+.fd-search {
+  width: 100%;
+  padding: 6px 10px;
+  border: 1.5px solid var(--border);
+  border-radius: 6px;
+  font-size: 12px;
+  outline: none;
+}
+.fd-search:focus { border-color: var(--sigma-red); }
+
+.fd-options-list {
+  max-height: 220px;
+  overflow-y: auto;
+  padding: 4px 0;
+}
+.fd-option {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  cursor: pointer;
+  font-size: 12px;
+  color: var(--text);
+  transition: background .1s;
+}
+.fd-option:hover { background: #f9fafb; }
+.fd-option input[type="checkbox"] {
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+  cursor: pointer;
+  accent-color: var(--sigma-red);
+}
+.fd-option-text { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.fd-option-count {
+  color: var(--muted);
+  font-size: 11px;
+  flex-shrink: 0;
+}
+.fd-option.hidden { display: none; }
+.fd-select-all {
+  border-bottom: 1px solid var(--border);
+  font-weight: 600;
+  color: var(--muted);
+}
+
+.fd-footer {
+  display: flex;
+  gap: 6px;
+  padding: 8px 10px;
+  border-top: 1px solid var(--border);
+  justify-content: flex-end;
+}
+.fd-btn-clear {
+  padding: 5px 12px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  border: 1px solid #fee2e2;
+  background: #fff5f5;
+  color: #991b1b;
+}
+.fd-btn-clear:hover { background: #fee2e2; }
+.fd-btn-apply {
+  padding: 5px 14px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  border: 1px solid var(--sigma-red);
+  background: var(--sigma-red);
+  color: #fff;
+}
+.fd-btn-apply:hover { opacity: .9; }
+
+/* ── Ações dos filtros ───────────────────────────────────── */
+.filtros-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  padding-top: 10px;
+  border-top: 1px solid var(--border);
+}
+.btn-limpar-filtros {
+  padding: 6px 16px;
+  border-radius: 99px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  border: 1.5px solid #fee2e2;
+  background: #fff5f5;
+  color: #991b1b;
+  text-decoration: none;
+  transition: all .15s;
+}
+.btn-limpar-filtros:hover { background: #fee2e2; }
+
+/* ── Chips de filtros ativos ─────────────────────────────── */
+.filtros-ativos-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+.chip-filtro {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 10px;
+  background: #fff3f3;
+  border: 1px solid #fca5a5;
+  border-radius: 99px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #991b1b;
+}
+.chip-filtro button {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: #991b1b;
+  font-size: 13px;
+  padding: 0 0 0 2px;
+  line-height: 1;
+}
+
+/* ── Meta bar ────────────────────────────────────────────── */
+.meta-bar {
+  font-size: 12px;
+  color: var(--muted);
+  margin-bottom: 14px;
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.sync-btn {
+  padding: 5px 12px;
+  background: #eff6ff;
+  color: #1d4ed8;
+  border: 1px solid #bfdbfe;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all .15s;
+}
+.sync-btn:hover { background: #dbeafe; }
+.sync-btn.loading { opacity: .6; cursor: not-allowed; }
+
+/* ── Tabela de empresas ──────────────────────────────────── */
+.emp-table-wrap {
+  overflow-x: auto;
+  background: var(--white);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  box-shadow: var(--shadow);
+}
+.emp-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+  min-width: 900px;
+}
+.emp-table th {
+  background: #f9fafb;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .5px;
+  color: var(--muted);
+  padding: 10px 12px;
+  border-bottom: 1.5px solid var(--border);
+  white-space: nowrap;
+  text-align: left;
+}
+.emp-table th.sortable { cursor: pointer; user-select: none; }
+.emp-table th.sortable:hover { color: var(--sigma-red); }
+.emp-table td {
+  padding: 10px 12px;
+  border-bottom: 1px solid #f3f4f6;
+  vertical-align: middle;
+  color: var(--text);
+}
+.emp-table tr:last-child td { border-bottom: none; }
+.emp-table tr:hover td { background: #fafafa; }
+.emp-table .td-nome {
+  font-weight: 600;
+  color: var(--text);
+}
+.emp-table .td-nome a {
+  color: inherit;
+  text-decoration: none;
+}
+.emp-table .td-nome a:hover { color: var(--sigma-red); text-decoration: underline; }
+.emp-table .td-cnpj {
+  font-family: monospace;
+  font-size: 12px;
+  color: var(--muted);
+  white-space: nowrap;
+}
+.emp-table .td-muted {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+/* ── Badges de situação da empresa ───────────────────────── */
+.sbadge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: 99px;
+  font-size: 10px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.sbadge-ativa     { background: #ccfbf1; color: #0f766e; }
+.sbadge-inativa   { background: #fee2e2; color: #991b1b; }
+.sbadge-naomensal { background: #dbeafe; color: #1e40af; }
+
+/* ── Badges de classificação documental ──────────────────── */
+.dbadge {
+  display: inline-block;
+  padding: 2px 7px;
+  border-radius: 4px;
+  font-size: 10px;
+  font-weight: 700;
+  white-space: nowrap;
+  max-width: 130px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.dbadge-vencido     { background: #fee2e2; color: #991b1b; }
+.dbadge-avencer     { background: #fef9c3; color: #854d0e; }
+.dbadge-avencer30   { background: #fef3c7; color: #92400e; }
+.dbadge-valido      { background: #d1fae5; color: #065f46; }
+.dbadge-andamento   { background: #dbeafe; color: #1e40af; }
+.dbadge-isento      { background: #f3f4f6; color: #6b7280; }
+.dbadge-vazio       { background: #f3f4f6; color: #9ca3af; font-style: italic; }
+.dbadge-revisar     { background: #fff7ed; color: #92400e; }
+
+/* ── Empty state ─────────────────────────────────────────── */
+.empty-state {
+  text-align: center;
+  padding: 48px;
+  background: var(--white);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+}
+.empty-state p { color: var(--muted); font-size: 14px; margin-bottom: 16px; }
+
+/* ── Legenda ─────────────────────────────────────────────── */
+.legenda { display: flex; gap: 8px; flex-wrap: wrap; font-size: 11px; margin-top: 14px; }
+
+/* ── Toast ───────────────────────────────────────────────── */
+#sync-msg { margin-top: 12px; }
+
+/* ── Resumo da Seleção ───────────────────────────────────── */
+.resumo-selecao {
+  background: #f8fafc;
+  border: 1.5px solid #e0e7ff;
+  border-radius: 12px;
+  padding: 16px 18px;
+  margin-bottom: 14px;
+  box-shadow: 0 1px 4px rgba(0,0,0,.05);
+}
+.resumo-selecao-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text);
+  margin-bottom: 4px;
+}
+.resumo-selecao-subtitle {
+  font-size: 11px;
+  color: #9ca3af;
+  margin-bottom: 14px;
+}
+.resumo-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 10px;
+}
+.resumo-campo {
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 12px 14px 10px;
+  box-shadow: 0 1px 3px rgba(0,0,0,.05);
+}
+.resumo-campo-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+.resumo-campo-titulo {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .5px;
+  color: var(--muted);
+}
+.resumo-campo-total {
+  font-size: 10px;
+  color: #9ca3af;
+  white-space: nowrap;
+  margin-left: 6px;
+}
+.resumo-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+.resumo-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 2px 7px;
+  border-radius: 4px;
+  font-size: 10px;
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+  border: 1.5px solid transparent;
+  background: inherit;
+  font-family: inherit;
+  transition: box-shadow .15s, border-color .15s, opacity .15s;
+}
+.resumo-badge strong { font-size: 11px; }
+.resumo-badge:hover { opacity: .85; }
+.resumo-badge--ativo {
+  border-color: #374151 !important;
+  box-shadow: 0 0 0 2px rgba(55,65,81,.25);
+}
+
+/* ── Paginação ───────────────────────────────────────────── */
+.pagination {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-wrap: wrap;
+  margin: 16px 0 8px;
+}
+.pag-btn {
+  display: inline-flex;
+  align-items: center;
+  padding: 6px 12px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  text-decoration: none;
+  color: var(--text);
+  background: var(--white);
+  border: 1.5px solid var(--border);
+  transition: border-color .15s, background .15s;
+}
+.pag-btn:hover { border-color: var(--sigma-red); color: var(--sigma-red); }
+.pag-current { background: var(--sigma-red) !important; color: #fff !important; border-color: var(--sigma-red) !important; }
+.pag-disabled { opacity: .4; pointer-events: none; }
+.pag-ellipsis { padding: 6px 4px; font-size: 13px; color: var(--muted); }
+/* ── Flash messages do backend ───────────────────────────── */
+.flash-msg {
+  padding: 12px 16px;
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: 500;
+  margin-bottom: 14px;
+}
+.flash-warning { background: #fffbeb; color: #92400e; border: 1px solid #fcd34d; }
+@media (max-width: 768px) {
+  .filtros-grid { grid-template-columns: repeat(2, 1fr); }
+  .emp-table-wrap { border-radius: 0; margin: 0 -16px; }
+  .action-bar { flex-direction: column; align-items: flex-start; }
+}
+{% endblock %}
+
+{% block content %}
+
+{% with msgs = get_flashed_messages(with_categories=true) %}
+  {% for cat, msg in msgs %}
+  <div class="flash-msg flash-{{ cat }}">{{ msg }}</div>
+  {% endfor %}
+{% endwith %}
+
+<!-- ── Busca geral ─────────────────────────────────────── -->
+<div class="emp-search-bar">
+  <span class="emp-search-icon">
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+      <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+    </svg>
+  </span>
+  <input type="text" id="input-busca" value="{{ q }}" autocomplete="off"
+         placeholder="Buscar por nome, CNPJ, código Domínio, município, responsável...">
+</div>
+
+<!-- ── Abas de situação ───────────────────────────────── -->
+<div class="filter-row">
+  <a href="{{ url_for('empresas.index', q=q, aba='') }}" class="filter-pill {% if aba == '' %}active{% endif %}">Todas</a>
+  <a href="{{ url_for('empresas.index', q=q, aba='ATIVAS') }}" class="filter-pill {% if aba == 'ATIVAS' %}active{% endif %}">Ativa</a>
+  <a href="{{ url_for('empresas.index', q=q, aba='INATIVAS') }}" class="filter-pill {% if aba == 'INATIVAS' %}active{% endif %}">Inativa</a>
+  <a href="{{ url_for('empresas.index', q=q, aba='NÃO MENSAIS') }}" class="filter-pill {% if aba == 'NÃO MENSAIS' %}active{% endif %}">Avulso</a>
+</div>
+
+<!-- ── Barra de ação: Toggle filtros + Exportação ─────── -->
+<div class="action-bar">
+  <button type="button" id="btn-toggle-filtros"
+          class="btn-toggle-filtros {% if n_filtros > 0 %}has-active{% endif %}"
+          onclick="toggleFiltros()">
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+      <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/>
+    </svg>
+    <span id="txt-toggle-filtros">{% if n_filtros > 0 %}Ocultar filtros{% else %}Mostrar filtros{% endif %}</span>
+    {% if n_filtros > 0 %}<span class="badge-count">{{ n_filtros }}</span>{% endif %}
+  </button>
+
+  <div class="ml-auto" style="display:flex; gap:8px; flex-wrap:wrap;">
+    <a id="btn-exportar-lista" href="#" class="btn-export btn-export-lista"
+       title="Exportar a lista atual para Excel">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+        <polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
+      </svg>
+      Exportar lista (Excel)
+    </a>
+
+    <a id="btn-relatorio" href="#" class="btn-export btn-export-relatorio"
+       title="Gerar relatório completo em Excel"
+       onclick="verificarRelatorio(event)">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <rect x="3" y="3" width="18" height="18" rx="2"/>
+        <path d="M3 9h18M9 21V9"/>
+      </svg>
+      Relatório de controle (Excel)
+    </a>
+
+    <a href="{{ url_for('empresas.nova') }}" class="btn btn-primary btn-sm">+ Nova Empresa</a>
+
+    {% if session.is_admin %}
+    <button class="sync-btn" id="btn-importar" onclick="importarPlanilha()">
+      ↓ Importar planilha
+    </button>
+    <button class="sync-btn" id="btn-exportar-sheets" onclick="exportarPlanilha()">
+      ↑ Exportar planilha
+    </button>
+    {% endif %}
+  </div>
+</div>
+
+<!-- ── Painel de filtros avançados ────────────────────── -->
+<div class="filtros-panel" id="filtros-panel" style="display:none;">
+  <div class="filtros-panel-title">Filtros Avançados</div>
+  <div class="filtros-grid">
+
+    {# Linha 1: Município, Responsável, Atuação, Escritório, Procuração #}
+    {# Linha 2: CNES, VISA, TPI, Publicidade, Lic. Ambiental             #}
+    {# Linha 3: Alvará, Bombeiro Vencimento, Bombeiro Protocolo           #}
+
+    {% for campo in campos_filtro %}
+    {% set selecionados = filtros[campo] %}
+    {% set n_sel = selecionados|length %}
+    <div class="fd-container" data-campo="{{ campo }}">
+      <span class="fd-label">{{ labels[campo] }}</span>
+      <button type="button"
+              class="fd-btn {% if n_sel > 0 %}ativo{% endif %} {% if _fd_open == campo %}aberto{% endif %}"
+              id="fd-btn-{{ campo }}"
+              onclick="fdToggle('{{ campo }}')">
+        <span class="fd-btn-text">
+          {% if n_sel == 0 %}Todos
+          {% elif n_sel == 1 %}{{ selecionados[0] if selecionados[0] != '__vazio__' else '(Vazio)' }}
+          {% else %}{{ n_sel }} selecionados{% endif %}
+        </span>
+        {% if n_sel > 0 %}<span class="fd-count-badge">{{ n_sel }}</span>{% endif %}
+        <span class="fd-btn-arrow">&#9660;</span>
+      </button>
+
+      <div class="fd-panel" id="fd-panel-{{ campo }}">
+        <div class="fd-search-wrap">
+          <input type="text" class="fd-search"
+                 placeholder="Buscar em {{ labels[campo] }}..."
+                 oninput="fdFiltrarOpcoes('{{ campo }}', this.value)">
+        </div>
+        <div class="fd-options-list" id="fd-list-{{ campo }}">
+          <!-- Opção "Todos" (desmarcar tudo) -->
+          <label class="fd-option fd-select-all">
+            <input type="checkbox" id="fd-all-{{ campo }}"
+                   {% if n_sel == 0 %}checked{% endif %}
+                   onchange="fdToggleAll('{{ campo }}', this.checked)">
+            <span class="fd-option-text">Todos</span>
+          </label>
+          {% if opcoes_tem_vazio[campo] %}
+          <label class="fd-option">
+            <input type="checkbox" class="fd-check-{{ campo }}" value="__vazio__"
+                   {% if '__vazio__' in selecionados %}checked{% endif %}
+                   onchange="fdCheckChange('{{ campo }}')">
+            <span class="fd-option-text">(Vazio)</span>
+          </label>
+          {% endif %}
+          {% for opcao in opcoes[campo] %}
+          <label class="fd-option">
+            <input type="checkbox" class="fd-check-{{ campo }}" value="{{ opcao }}"
+                   {% if opcao in selecionados %}checked{% endif %}
+                   onchange="fdCheckChange('{{ campo }}')">
+            <span class="fd-option-text" title="{{ opcao }}">{{ opcao }}</span>
+            {% if campo not in sem_contador and contadores[campo].get(opcao) %}
+            <span class="fd-option-count">({{ contadores[campo][opcao] }})</span>
+            {% endif %}
+          </label>
+          {% endfor %}
+        </div>
+        <div class="fd-footer">
+          <button class="fd-btn-clear" onclick="fdLimpar('{{ campo }}')">Limpar</button>
+          <button class="fd-btn-apply" onclick="fdAplicar()">Aplicar</button>
+        </div>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+
+  <div class="filtros-actions">
+    {% if n_filtros > 0 %}
+    <button class="btn-limpar-filtros" onclick="fdLimparTodos()">Limpar todos os filtros</button>
+    {% endif %}
+    <span style="font-size:12px; color:var(--muted);">
+      {% if n_filtros == 0 %}Selecione valores para filtrar. Use Ctrl/Cmd para múltipla seleção.
+      {% else %}{{ n_filtros }} filtro(s) ativo(s). Clique em "Aplicar" após selecionar.{% endif %}
+    </span>
+  </div>
+</div>
+
+<!-- ── Chips de filtros ativos ────────────────────────── -->
+{% if n_filtros > 0 %}
+<div class="filtros-ativos-chips" id="chips-filtros">
+  {% for campo in campos_filtro %}
+    {% if filtros[campo] %}
+    <span class="chip-filtro">
+      <strong>{{ labels[campo] }}:</strong>
+      {% for v in filtros[campo] %}
+        {{ '(Vazio)' if v == '__vazio__' else v }}{% if not loop.last %}, {% endif %}
+      {% endfor %}
+      <button type="button" onclick="fdLimparEAplicar('{{ campo }}')" title="Remover filtro">&times;</button>
+    </span>
+    {% endif %}
+  {% endfor %}
+  {% for campo, cat in active_class.items() %}
+  <span class="chip-filtro">
+    <strong>{{ labels.get(campo, campo) }} (classif.):</strong> {{ cat }}
+    <button type="button" onclick="removerClassFiltro('{{ campo }}')" title="Remover filtro">&times;</button>
+  </span>
+  {% endfor %}
+  <button class="btn-limpar-filtros" onclick="fdLimparTodos()">Limpar todos</button>
+</div>
+{% endif %}
+
+<!-- ── Resumo da Seleção (aparece apenas com filtros ativos) ── -->
+{% if tem_filtros and resumo %}
+{% set _bc_map = {
+  'Vencido': 'dbadge-vencido',
+  'A vencer — 30 dias': 'dbadge-avencer30',
+  'A vencer — 60 dias': 'dbadge-avencer',
+  'A vencer — 90 dias': 'dbadge-avencer',
+  'A vencer': 'dbadge-valido',
+  'Válido indeterminado': 'dbadge-valido',
+  'Em andamento': 'dbadge-andamento',
+  'Isento': 'dbadge-isento',
+  'Não possui': 'dbadge-isento',
+  'Sem informação': 'dbadge-vazio',
+  'Revisar cadastro': 'dbadge-revisar',
+  'Informação não classificada': 'dbadge-revisar',
+} %}
+<div class="resumo-selecao">
+  <div class="resumo-selecao-title">
+    Resumo da seleção — {{ total_filtrado }} empresa{{ 's' if total_filtrado != 1 }}
+  </div>
+  <div class="resumo-selecao-subtitle">O total considera toda a seleção filtrada, independentemente da página exibida. Clique num badge para filtrar por classificação.</div>
+  <div class="resumo-grid">
+    {% for campo in campos_documentais %}
+    {% if resumo.get(campo) %}
+    {% set total_campo = resumo[campo].values()|sum %}
+    <div class="resumo-campo">
+      <div class="resumo-campo-header">
+        <span class="resumo-campo-titulo">{{ labels.get(campo, campo) }}</span>
+        <span class="resumo-campo-total">{{ total_campo }} empresa{{ 's' if total_campo != 1 }}</span>
+      </div>
+      <div class="resumo-badges">
+        {% for cat in ['Vencido','A vencer — 30 dias','A vencer — 60 dias','A vencer — 90 dias','A vencer','Válido indeterminado','Em andamento','Isento','Não possui','Revisar cadastro','Informação não classificada','Sem informação'] %}
+        {% if resumo[campo].get(cat) %}
+        {% set _ativo = active_class.get(campo) == cat %}
+        <button type="button"
+                class="resumo-badge {{ _bc_map.get(cat, 'dbadge-vazio') }}{% if _ativo %} resumo-badge--ativo{% endif %}"
+                title="{% if _ativo %}Remover filtro: {{ cat }}{% else %}Filtrar por {{ labels.get(campo, campo) }}: {{ cat }}{% endif %}"
+                onclick="{% if _ativo %}removerClassFiltro('{{ campo }}'){% else %}aplicarClassFiltro('{{ campo }}','{{ cat }}'){% endif %}">
+          {{ cat[:18] }}{% if cat|length > 18 %}…{% endif %}
+          <strong>{{ resumo[campo][cat] }}</strong>
+        </button>
+        {% endif %}
+        {% endfor %}
+      </div>
+    </div>
+    {% endif %}
+    {% endfor %}
+  </div>
+</div>
+{% endif %}
+
+<!-- ── Meta bar ───────────────────────────────────────── -->
+<div class="meta-bar">
+  <span>
+    {% if total == 0 %}
+      Nenhuma empresa sincronizada.
+    {% elif total_filtrado == 0 %}
+      Nenhuma empresa encontrada.
+    {% else %}
+      {% set ini = (page - 1) * per_page + 1 %}
+      {% set fim = [page * per_page, total_filtrado] | min %}
+      Mostrando <strong>{{ ini }}–{{ fim }}</strong> de <strong>{{ total_filtrado }}</strong> empresa(s)
+      {% if not tem_filtros %}&bull; Total no banco: <strong>{{ total }}</strong>{% endif %}
+    {% endif %}
+  </span>
+  {% if ultima_sync %}
+  <span style="color:#9ca3af;">Sync: {{ ultima_sync }}</span>
+  {% endif %}
+</div>
+
+<!-- ── Tabela de empresas ─────────────────────────────── -->
+{% if empresas %}
+<div class="emp-table-wrap">
+  <table class="emp-table" id="emp-table">
+    <thead>
+      <tr>
+        <th>Empresa</th>
+        <th>CNPJ/CPF</th>
+        <th>Município</th>
+        <th>Responsável</th>
+        <th>Alvará</th>
+        <th>VISA</th>
+        <th>Bombeiro</th>
+        <th>Procuração</th>
+        <th>Situação</th>
+        <th>Ações</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for e in empresas %}
+      <tr>
+        <td class="td-nome">
+          <a href="{{ url_for('empresas.detalhe', empresa_id=e.id) }}">
+            {{ e.nome_empresa }}
+          </a>
+          {% if e.atuacao %}
+          <div style="font-size:11px; color:var(--muted); margin-top:2px;">{{ e.atuacao }}</div>
+          {% endif %}
+        </td>
+
+        <td class="td-cnpj">{{ e.cnpj_cpf or '—' }}</td>
+
+        <td class="td-muted">
+          {{ e.municipio or '—' }}
+          {% if e.escritorio %}<br><span style="font-size:11px;">{{ e.escritorio }}</span>{% endif %}
+        </td>
+
+        <td class="td-muted">{{ e.responsavel or '—' }}</td>
+
+        <td>
+          {% set cl_al = classificar('alvara_funcionamento', e.alvara_funcionamento) %}
+          {% if e.alvara_funcionamento %}
+            <span class="dbadge {{ badge_cls(cl_al) }}" title="{{ e.alvara_funcionamento }}">{{ cl_al }}</span>
+          {% else %}
+            <span class="dbadge dbadge-vazio">—</span>
+          {% endif %}
+        </td>
+
+        <td>
+          {% set cl_vi = classificar('visa', e.visa) %}
+          {% if e.visa %}
+            <span class="dbadge {{ badge_cls(cl_vi) }}" title="{{ e.visa }}">{{ cl_vi }}</span>
+          {% else %}
+            <span class="dbadge dbadge-vazio">—</span>
+          {% endif %}
+        </td>
+
+        <td>
+          {% set cl_bv = classificar('venc_bombeiro', e.venc_bombeiro) %}
+          {% if e.venc_bombeiro %}
+            <span class="dbadge {{ badge_cls(cl_bv) }}" title="Venc.: {{ e.venc_bombeiro }}">{{ cl_bv }}</span>
+          {% endif %}
+          {% if e.prot_bombeiro %}
+            <span class="dbadge dbadge-andamento" title="Prot.: {{ e.prot_bombeiro }}" style="margin-top:2px; display:block;">Protocolo</span>
+          {% endif %}
+          {% if not e.venc_bombeiro and not e.prot_bombeiro %}
+            <span class="dbadge dbadge-vazio">—</span>
+          {% endif %}
+        </td>
+
+        <td>
+          {% set cl_pr = classificar('procuracao', e.procuracao) %}
+          {% if e.procuracao %}
+            <span class="dbadge {{ badge_cls(cl_pr) }}" title="{{ e.procuracao }}">{{ e.procuracao[:20] }}{% if e.procuracao|length > 20 %}…{% endif %}</span>
+          {% else %}
+            <span class="dbadge dbadge-vazio">—</span>
+          {% endif %}
+        </td>
+
+        <td>
+          {% if e.aba == 'ATIVAS' %}
+            <span class="sbadge sbadge-ativa">Ativa</span>
+          {% elif e.aba == 'INATIVAS' %}
+            <span class="sbadge sbadge-inativa">Inativa</span>
+          {% elif e.aba == 'NÃO MENSAIS' %}
+            <span class="sbadge sbadge-naomensal">Avulso</span>
+          {% endif %}
+        </td>
+
+        <td>
+          <a href="{{ url_for('empresas.detalhe', empresa_id=e.id) }}"
+             style="font-size:12px; font-weight:700; color:var(--sigma-red); text-decoration:none;">
+            Ver &rsaquo;
+          </a>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<!-- ── Paginação ───────────────────────────────────────── -->
+{% if total_pages > 1 %}
+<div class="pagination">
+  {% if page > 1 %}
+  <a href="/empresas/?{{ base_query }}{% if base_query %}&{% endif %}page={{ page - 1 }}" class="pag-btn">‹ Anterior</a>
+  {% else %}
+  <span class="pag-btn pag-disabled">‹ Anterior</span>
+  {% endif %}
+
+  {% for p in range(1, total_pages + 1) %}
+    {% if p == page %}
+    <span class="pag-btn pag-current">{{ p }}</span>
+    {% elif p == 1 or p == total_pages or (p >= page - 2 and p <= page + 2) %}
+    <a href="/empresas/?{{ base_query }}{% if base_query %}&{% endif %}page={{ p }}" class="pag-btn">{{ p }}</a>
+    {% elif p == page - 3 or p == page + 3 %}
+    <span class="pag-ellipsis">…</span>
+    {% endif %}
+  {% endfor %}
+
+  {% if page < total_pages %}
+  <a href="/empresas/?{{ base_query }}{% if base_query %}&{% endif %}page={{ page + 1 }}" class="pag-btn">Próxima ›</a>
+  {% else %}
+  <span class="pag-btn pag-disabled">Próxima ›</span>
+  {% endif %}
+</div>
+{% endif %}
+
+<!-- Legenda -->
+<div class="legenda">
+  <span class="dbadge dbadge-vencido">Vencido</span>
+  <span class="dbadge dbadge-avencer30">A vencer — 30d</span>
+  <span class="dbadge dbadge-avencer">A vencer</span>
+  <span class="dbadge dbadge-valido">Válido indeterminado</span>
+  <span class="dbadge dbadge-andamento">Em andamento</span>
+  <span class="dbadge dbadge-isento">Isento / Não possui</span>
+  <span class="dbadge dbadge-revisar">Revisar cadastro</span>
+  <span class="dbadge dbadge-vazio">Sem informação</span>
+</div>
+
+{% elif total == 0 %}
+<div class="empty-state">
+  <p>Nenhuma empresa carregada ainda.
+  {% if session.is_admin %}Clique em <strong>Importar planilha</strong> para carregar os dados.{% else %}Aguarde a administradora sincronizar os dados.{% endif %}
+  </p>
+  {% if session.is_admin %}
+  <button class="btn btn-primary" onclick="importarPlanilha()">Importar da Planilha agora</button>
+  {% endif %}
+</div>
+{% else %}
+<div class="empty-state">
+  <p>Nenhuma empresa encontrada para os filtros aplicados.</p>
+  <button class="btn btn-outline" onclick="fdLimparTodos()">Limpar filtros</button>
+</div>
+{% endif %}
+
+<div id="sync-msg"></div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+// ── Estado dos filtros ─────────────────────────────────────────────────────
+// Inicializado a partir dos params da URL atual
+const CAMPOS_FILTRO = {{ campos_filtro|tojson }};
+const IS_ADMIN = {{ 'true' if session.is_admin else 'false' }};
+const USER_NOME = {{ (session.user_nome or '')|tojson }};
+const RESPONSAVEIS_SELECIONADOS = {{ (filtros.get('responsavel', []))|tojson }};
+
+// Estado em memória: mapa campo → Set de valores selecionados
+const _estado = {};
+CAMPOS_FILTRO.forEach(campo => {
+  const params = new URLSearchParams(window.location.search);
+  _estado[campo] = new Set(params.getAll(campo));
+});
+
+// ── Toggle do painel de filtros ────────────────────────────────────────────
+function toggleFiltros() {
+  const panel = document.getElementById('filtros-panel');
+  const btn   = document.getElementById('btn-toggle-filtros');
+  const txt   = document.getElementById('txt-toggle-filtros');
+  const aberto = panel.style.display !== 'none';
+  panel.style.display = aberto ? 'none' : 'block';
+  txt.textContent = aberto ? 'Mostrar filtros' : 'Ocultar filtros';
+}
+
+// Abrir painel automaticamente se há filtros ativos
+{% if n_filtros > 0 %}
+document.addEventListener('DOMContentLoaded', function() {
+  const panel = document.getElementById('filtros-panel');
+  panel.style.display = 'block';
+  document.getElementById('txt-toggle-filtros').textContent = 'Ocultar filtros';
+});
+{% endif %}
+
+// ── Dropdown de filtro ─────────────────────────────────────────────────────
+function fdToggle(campo) {
+  // Fechar todos os outros
+  document.querySelectorAll('.fd-panel.aberto').forEach(p => {
+    if (p.id !== 'fd-panel-' + campo) {
+      p.classList.remove('aberto');
+      document.getElementById('fd-btn-' + p.id.replace('fd-panel-', '')).classList.remove('aberto');
+    }
+  });
+
+  const panel = document.getElementById('fd-panel-' + campo);
+  const btn   = document.getElementById('fd-btn-' + campo);
+  const aberto = panel.classList.contains('aberto');
+  panel.classList.toggle('aberto', !aberto);
+  btn.classList.toggle('aberto', !aberto);
+
+  if (!aberto) {
+    // Focar busca ao abrir
+    const search = panel.querySelector('.fd-search');
+    if (search) setTimeout(() => search.focus(), 50);
+  }
+}
+
+// Fechar ao clicar fora
+document.addEventListener('click', function(e) {
+  if (!e.target.closest('.fd-container')) {
+    document.querySelectorAll('.fd-panel.aberto').forEach(p => {
+      p.classList.remove('aberto');
+      const campo = p.id.replace('fd-panel-', '');
+      const btn = document.getElementById('fd-btn-' + campo);
+      if (btn) btn.classList.remove('aberto');
+    });
+  }
+});
+
+// ── Filtrar opções internas do dropdown ───────────────────────────────────
+function fdFiltrarOpcoes(campo, busca) {
+  const lista = document.getElementById('fd-list-' + campo);
+  const busca_norm = busca.toLowerCase().trim();
+  lista.querySelectorAll('.fd-option:not(.fd-select-all)').forEach(opt => {
+    const texto = opt.querySelector('.fd-option-text').textContent.toLowerCase();
+    opt.classList.toggle('hidden', busca_norm && !texto.includes(busca_norm));
+  });
+}
+
+// ── Selecionar / desselecionar todos ──────────────────────────────────────
+function fdToggleAll(campo, checked) {
+  if (checked) {
+    // Desmarcar todos
+    document.querySelectorAll('.fd-check-' + campo).forEach(cb => cb.checked = false);
+    _estado[campo].clear();
+  }
+  _atualizarAllCheckbox(campo);
+}
+
+function fdCheckChange(campo) {
+  // Atualizar estado em memória
+  const checks = document.querySelectorAll('.fd-check-' + campo);
+  _estado[campo].clear();
+  checks.forEach(cb => {
+    if (cb.checked) _estado[campo].add(cb.value);
+  });
+  _atualizarAllCheckbox(campo);
+}
+
+function _atualizarAllCheckbox(campo) {
+  const allCb = document.getElementById('fd-all-' + campo);
+  if (allCb) allCb.checked = _estado[campo].size === 0;
+}
+
+// ── Aplicar filtros (navegar para URL com params) ─────────────────────────
+function fdAplicar() {
+  const params = new URLSearchParams();
+
+  const q = document.getElementById('input-busca').value.trim();
+  if (q) params.set('q', q);
+
+  // Aba: preservar da URL atual
+  const url_atual = new URLSearchParams(window.location.search);
+  const aba = url_atual.get('aba') || '';
+  if (aba) params.set('aba', aba);
+
+  CAMPOS_FILTRO.forEach(campo => {
+    _estado[campo].forEach(v => params.append(campo, v));
+  });
+
+  window.location.href = '/empresas/?' + params.toString();
+}
+
+// ── Limpar filtro individual + aplicar ────────────────────────────────────
+function fdLimpar(campo) {
+  document.querySelectorAll('.fd-check-' + campo).forEach(cb => cb.checked = false);
+  _estado[campo].clear();
+  _atualizarAllCheckbox(campo);
+}
+
+function fdLimparEAplicar(campo) {
+  fdLimpar(campo);
+  fdAplicar();
+}
+
+// ── Limpar todos os filtros ───────────────────────────────────────────────
+function fdLimparTodos() {
+  CAMPOS_FILTRO.forEach(campo => {
+    fdLimpar(campo);
+  });
+  // fdAplicar constrói a URL do zero sem class_* — limpa automaticamente
+  fdAplicar();
+}
+
+// ── Filtros de classificação (class_*) ────────────────────────────────────
+function aplicarClassFiltro(campo, cat) {
+  const params = new URLSearchParams(window.location.search);
+  params.set('class_' + campo, cat);
+  params.delete('page');
+  window.location.href = window.location.pathname + '?' + params.toString();
+}
+
+function removerClassFiltro(campo) {
+  const params = new URLSearchParams(window.location.search);
+  params.delete('class_' + campo);
+  params.delete('page');
+  window.location.href = window.location.pathname + '?' + params.toString();
+}
+
+// ── Busca ao vivo com debounce ────────────────────────────────────────────
+var _buscaTimer = null;
+document.getElementById('input-busca').addEventListener('input', function() {
+  clearTimeout(_buscaTimer);
+  _buscaTimer = setTimeout(function() { fdAplicar(); }, 400);
+});
+document.getElementById('input-busca').addEventListener('keydown', function(e) {
+  if (e.key === 'Enter') { clearTimeout(_buscaTimer); fdAplicar(); }
+});
+
+// ── Construir URL para exportação com filtros atuais ──────────────────────
+function _construirUrlExport(rota) {
+  const params = new URLSearchParams(window.location.search);
+  return '/empresas/' + rota + '?' + params.toString();
+}
+
+// Atualizar links de exportação quando a página carrega
+document.addEventListener('DOMContentLoaded', function() {
+  document.getElementById('btn-exportar-lista').href = _construirUrlExport('exportar-excel');
+  _atualizarBotaoRelatorio();
+});
+
+// ── Botão de relatório: validação de permissão no front-end ──────────────
+function _atualizarBotaoRelatorio() {
+  const btn = document.getElementById('btn-relatorio');
+  btn.href = _construirUrlExport('relatorio-excel');
+
+  if (!IS_ADMIN) {
+    // Usuário comum: verificar se filtrou exatamente o próprio nome
+    const params = new URLSearchParams(window.location.search);
+    const resps = params.getAll('responsavel');
+    const nomeNorm = USER_NOME.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+
+    if (resps.length === 1) {
+      const sel = resps[0].toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+      if (sel === nomeNorm) {
+        btn.classList.remove('bloqueado');
+        btn.title = 'Gerar relatório de controle';
+        return;
+      }
+    }
+    btn.classList.add('bloqueado');
+    btn.title = 'Para gerar o relatório, selecione apenas o seu próprio nome em Responsável.';
+  } else {
+    btn.classList.remove('bloqueado');
+    btn.title = 'Gerar relatório completo de controle';
+  }
+}
+
+function verificarRelatorio(e) {
+  const btn = document.getElementById('btn-relatorio');
+  if (!IS_ADMIN && btn.classList.contains('bloqueado')) {
+    e.preventDefault();
+    const msg = document.getElementById('sync-msg');
+    msg.innerHTML = '<div class="alert alert-error">Para gerar o relatório de controle, selecione no filtro <strong>Responsável</strong> apenas o seu próprio nome.</div>';
+    msg.style.display = 'block';
+    setTimeout(() => { msg.style.display = 'none'; }, 5000);
+  }
+}
+
+// ── Sincronização com a planilha ──────────────────────────────────────────
+async function _chamarRota(url, btnId, textoCarregando, textoOriginal) {
+  const btn = document.getElementById(btnId);
+  const msg = document.getElementById('sync-msg');
+  if (btn) { btn.textContent = textoCarregando; btn.classList.add('loading'); btn.disabled = true; }
+  msg.style.display = 'none';
+  try {
+    const resp = await fetch(url, { method: 'POST' });
+    const json = await resp.json();
+    if (json.erro) {
+      msg.innerHTML = '<div class="alert alert-error">' + json.erro + '</div>';
+    } else {
+      msg.innerHTML = '<div class="alert alert-success">' + (json.mensagem || 'Concluído.') + ' Recarregando...</div>';
+      setTimeout(function() { location.reload(); }, 1800);
+    }
+    msg.style.display = 'block';
+  } catch(err) {
+    msg.innerHTML = '<div class="alert alert-error">Erro de conexão.</div>';
+    msg.style.display = 'block';
+  } finally {
+    if (btn) { btn.textContent = textoOriginal; btn.classList.remove('loading'); btn.disabled = false; }
+  }
+}
+
+function importarPlanilha() {
+  const ultimoBackup = '{{ ultimo_backup_ok or "" }}';
+  const infoBackup = ultimoBackup
+    ? '\n\nÚltima exportação bem-sucedida: ' + ultimoBackup + '.'
+    : '\n\nNenhuma exportação registrada ainda.';
+  const aviso = 'Atenção: a importação substituirá os dados do portal pelas informações da aba "Consolidada" da planilha.' + infoBackup + '\n\nDeseja continuar com a importação?';
+  if (!confirm(aviso)) return;
+  _chamarRota('/empresas/sincronizar', 'btn-importar', 'Importando...', '↓ Importar planilha');
+}
+
+function exportarPlanilha() {
+  if (!confirm('Exportar os dados do portal para a planilha do Google Sheets?\n\nIsso sobrescreverá a aba "Consolidada". Deseja continuar?')) return;
+  _chamarRota('/empresas/gravar-sheets', 'btn-exportar-sheets', 'Exportando...', '↑ Exportar planilha');
+}
+</script>
+{% endblock %}

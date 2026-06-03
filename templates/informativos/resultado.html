@@ -1,0 +1,85 @@
+{% extends 'base.html' %}
+{% block title %}Informativo Gerado{% endblock %}
+
+{% block content %}
+<div class="topbar">
+  <span class="topbar-title">✅ Informativo Gerado com Sucesso</span>
+  <span class="topbar-badge">{{ n_passos }} passo{{ 's' if n_passos != 1 else '' }}</span>
+</div>
+
+<div class="page-content" style="max-width:700px;">
+
+  <!-- Resumo -->
+  <div style="background:#f0fdf4;border:1px solid #86efac;border-radius:8px;padding:18px 24px;margin-bottom:24px;">
+    <div style="font-size:16px;font-weight:700;color:#166534;margin-bottom:4px;">
+      🎉 Documento gerado: <em>{{ titulo }}</em>
+    </div>
+    <div style="font-size:13px;color:#166534;">
+      {{ n_passos }} passo{{ 's' if n_passos != 1 else '' }} — PPTX e PDF prontos para download.
+    </div>
+  </div>
+
+  <!-- Downloads -->
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:24px;">
+
+    <!-- PDF -->
+    <div style="background:#fff;border:2px solid var(--sigma-red);border-radius:10px;padding:22px;text-align:center;">
+      <div style="font-size:36px;margin-bottom:10px;">📄</div>
+      <div style="font-size:15px;font-weight:700;color:var(--sigma-red);margin-bottom:6px;">
+        Versão PDF
+      </div>
+      <div style="font-size:12px;color:var(--muted);margin-bottom:16px;line-height:1.5;">
+        Envie este arquivo ao cliente.<br>
+        Não pode ser editado diretamente.
+      </div>
+      <a href="{{ url_for('informativos.download', token=token, tipo='pdf') }}"
+         class="btn btn-primary" style="display:inline-block;text-decoration:none;padding:10px 24px;">
+        ⬇ Baixar PDF
+      </a>
+    </div>
+
+    <!-- PPTX -->
+    <div style="background:#fff;border:1px solid var(--border);border-radius:10px;padding:22px;text-align:center;">
+      <div style="font-size:36px;margin-bottom:10px;">📊</div>
+      <div style="font-size:15px;font-weight:700;color:#1351B4;margin-bottom:6px;">
+        Versão PowerPoint
+      </div>
+      <div style="font-size:12px;color:var(--muted);margin-bottom:16px;line-height:1.5;">
+        Use para editar o conteúdo.<br>
+        Após editar, salve em PDF para enviar.
+      </div>
+      <a href="{{ url_for('informativos.download', token=token, tipo='pptx') }}"
+         class="btn" style="display:inline-block;text-decoration:none;padding:10px 24px;background:#DBE8FB;color:#1351B4;border-radius:8px;font-weight:700;font-size:14px;">
+        ⬇ Baixar PPTX
+      </a>
+    </div>
+
+  </div>
+
+  <!-- Instrução importante -->
+  <div style="background:#DBE8FB;border:2px solid #1351B4;border-radius:8px;padding:16px 20px;margin-bottom:24px;">
+    <div style="font-size:14px;font-weight:700;color:#1A3A6E;margin-bottom:6px;">
+      📌 Instrução para a equipe
+    </div>
+    <div style="font-size:13px;color:#1A3A6E;line-height:1.7;">
+      • <strong>Para enviar ao cliente:</strong> utilize sempre o arquivo <strong>PDF</strong>.<br>
+      • <strong>Se precisar editar</strong> o conteúdo ou layout: abra o arquivo <strong>PowerPoint (.pptx)</strong>,
+        faça as alterações e depois salve como PDF (<em>Arquivo → Salvar como → PDF</em>) antes de enviar.<br>
+      • Os dois arquivos ficam disponíveis pelos links acima por tempo limitado.
+    </div>
+  </div>
+
+  <!-- Ações -->
+  <div style="display:flex;gap:12px;padding-bottom:40px;">
+    <a href="{{ url_for('informativos.index') }}" class="btn btn-primary"
+       style="text-decoration:none;padding:10px 24px;">
+      ➕ Criar novo informativo
+    </a>
+    <a href="{{ url_for('dashboard') }}" class="btn"
+       style="text-decoration:none;padding:10px 24px;background:#f5f5f5;color:var(--muted);border:1px solid var(--border);border-radius:8px;font-weight:600;">
+      ← Voltar ao dashboard
+    </a>
+  </div>
+
+</div>
+{% endblock %}

@@ -1,0 +1,121 @@
+{% extends "base.html" %}
+{% block title %}Informativos{% endblock %}
+{% block page_title %}Informativos do Departamento{% endblock %}
+
+{% block extra_styles %}
+.news-header {
+  display: flex; justify-content: space-between; align-items: center;
+  margin-bottom: 20px; gap: 12px; flex-wrap: wrap;
+}
+.search-bar {
+  display: flex; gap: 8px; margin-bottom: 20px;
+}
+.search-bar input {
+  flex: 1; padding: 9px 14px; border: 1px solid var(--border);
+  border-radius: var(--radius); font-size: 14px; font-family: inherit;
+  outline: none; transition: border-color .15s;
+}
+.search-bar input:focus { border-color: var(--sigma-red); }
+.search-bar button {
+  padding: 9px 18px;
+}
+.search-info {
+  font-size: 13px; color: var(--muted); margin-bottom: 16px;
+}
+.search-info a { color: var(--sigma-red); text-decoration: none; }
+.search-info a:hover { text-decoration: underline; }
+.post-list { display: grid; gap: 16px; }
+.post-card {
+  background: #fff; border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 24px;
+  transition: box-shadow .15s;
+}
+.post-card:hover { box-shadow: 0 2px 12px rgba(0,0,0,.07); }
+.post-title {
+  font-size: 17px; font-weight: 700; margin-bottom: 6px;
+  color: var(--text);
+}
+.post-title a { text-decoration: none; color: inherit; }
+.post-title a:hover { color: var(--sigma-red); }
+.post-meta { font-size: 12px; color: var(--muted); margin-bottom: 10px; }
+.post-preview { font-size: 14px; color: #555; line-height: 1.65; }
+.post-footer {
+  margin-top: 14px; display: flex; align-items: center; gap: 12px;
+}
+.empty-state {
+  text-align: center; padding: 56px 24px; background: #fff;
+  border: 1px solid var(--border); border-radius: var(--radius);
+}
+.empty-state h3 { font-size: 16px; margin-bottom: 8px; color: var(--text); }
+.empty-state p { color: var(--muted); font-size: 14px; margin-bottom: 20px; }
+{% endblock %}
+
+{% block content %}
+<div class="news-header">
+  <p style="color:#666;font-size:14px;">
+    Comunicados e informativos do departamento Societário.
+  </p>
+  {% if is_admin %}
+  <a href="{{ url_for('newsletter.novo') }}" class="btn btn-primary">
+    + Novo Informativo
+  </a>
+  {% endif %}
+</div>
+
+{# Barra de pesquisa #}
+<form method="GET" action="{{ url_for('newsletter.index') }}" class="search-bar">
+  <input type="text" name="search" value="{{ search or '' }}"
+         placeholder="Pesquisar por título ou conteúdo..."
+         autocomplete="off">
+  <button type="submit" class="btn btn-outline">Buscar</button>
+  {% if search %}
+  <a href="{{ url_for('newsletter.index') }}" class="btn btn-outline" style="white-space:nowrap;">Limpar</a>
+  {% endif %}
+</form>
+
+{% if search %}
+<p class="search-info">
+  {% if posts %}
+    {{ posts|length }} resultado{{ 's' if posts|length != 1 else '' }} para
+    <strong>"{{ search }}"</strong> —
+  {% endif %}
+  <a href="{{ url_for('newsletter.index') }}">Ver todos</a>
+</p>
+{% endif %}
+
+{% if posts %}
+<div class="post-list">
+  {% for p in posts %}
+  <div class="post-card">
+    <div class="post-title">
+      <a href="{{ url_for('newsletter.ver', post_id=p.id) }}">{{ p.titulo }}</a>
+    </div>
+    <div class="post-meta">
+      Publicado por <strong>{{ p.autor_nome or 'Gestão' }}</strong>
+      em {{ p.criado_em[:10].split('-')|reverse|join('/') }}
+    </div>
+    <div class="post-preview">{{ p.conteudo | preview }}</div>
+    <div class="post-footer">
+      <a href="{{ url_for('newsletter.ver', post_id=p.id) }}" class="btn btn-outline btn-sm">Ler mais</a>
+      {% if is_admin %}
+      <a href="{{ url_for('newsletter.editar', post_id=p.id) }}" style="font-size:13px;color:var(--muted);text-decoration:none;">Editar</a>
+      {% endif %}
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% else %}
+<div class="empty-state">
+  {% if search %}
+  <h3>Nenhum informativo encontrado</h3>
+  <p>Nenhum resultado para "<strong>{{ search }}</strong>".<br>Tente outra palavra ou <a href="{{ url_for('newsletter.index') }}" style="color:var(--sigma-red)">veja todos</a>.</p>
+  {% else %}
+  <h3>Nenhum informativo ainda</h3>
+  <p>Os informativos publicados pela gestora aparecerão aqui.</p>
+  {% if is_admin %}
+  <a href="{{ url_for('newsletter.novo') }}" class="btn btn-primary">Criar primeiro informativo</a>
+  {% endif %}
+  {% endif %}
+</div>
+{% endif %}
+{% endblock %}

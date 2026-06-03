@@ -1,0 +1,154 @@
+{% extends "base.html" %}
+{% block title %}Notificacoes{% endblock %}
+{% block page_title %}Notificacoes{% endblock %}
+
+{% block extra_styles %}
+.notif-page { max-width: 860px; }
+.notif-page-header {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 20px;
+}
+.notif-page-title { font-size: 20px; font-weight: 800; }
+.notif-page-sub   { font-size: 13px; color: var(--muted); margin-top: 2px; }
+.notif-page-list  { display: flex; flex-direction: column; gap: 8px; }
+
+.notif-row {
+  background: var(--white); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 14px 18px;
+  display: flex; align-items: flex-start; gap: 12px;
+  box-shadow: var(--shadow); transition: background .12s;
+  cursor: pointer;
+}
+.notif-row:hover { background: #f9fafb; }
+.notif-row.nao-lida { background: #fef8f8; border-color: rgba(167,44,49,0.1); }
+.notif-row.nao-lida:hover { background: #fdf0f0; }
+
+.nr-dot-wrap { padding-top: 5px; flex-shrink: 0; }
+.nr-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--sigma-red); }
+.nr-dot.lida { background: #e5e7eb; }
+
+.nr-body { flex: 1; min-width: 0; }
+.nr-titulo { font-size: 14px; font-weight: 600; color: var(--text); line-height: 1.4; }
+.nr-desc   { font-size: 13px; color: var(--muted); margin-top: 3px; line-height: 1.5; }
+.nr-meta   { font-size: 11px; color: #b0b7c3; margin-top: 6px; }
+
+.nr-actions { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+.nr-link {
+  display: inline-flex; align-items: center; gap: 4px;
+  font-size: 12px; font-weight: 600; color: var(--sigma-red);
+  text-decoration: none; padding: 4px 10px; border-radius: 6px;
+  border: 1px solid rgba(167,44,49,0.2); transition: background .15s;
+}
+.nr-link:hover { background: var(--sigma-light); }
+.nr-link svg { width: 12px; height: 12px; }
+
+.notif-empty-state {
+  background: var(--white); border: 1px solid var(--border); border-radius: var(--radius);
+  padding: 48px 24px; text-align: center; box-shadow: var(--shadow);
+}
+.notif-empty-icon { font-size: 32px; margin-bottom: 12px; color: #d1d5db; display: flex; justify-content: center; }
+.notif-empty-icon svg { width: 48px; height: 48px; stroke: #d1d5db; }
+.notif-empty-title { font-size: 16px; font-weight: 700; color: var(--text); }
+.notif-empty-sub   { font-size: 13px; color: var(--muted); margin-top: 4px; }
+
+.section-divider {
+  font-size: 11px; font-weight: 800; text-transform: uppercase;
+  letter-spacing: 1px; color: #9ca3af;
+  padding: 8px 0 6px; border-bottom: 1px solid #f3f4f6; margin-bottom: 4px;
+}
+{% endblock %}
+
+{% block content %}
+<div class="notif-page">
+  <div class="notif-page-header">
+    <div>
+      <div class="notif-page-title">Notificacoes</div>
+      <div class="notif-page-sub">Ultimas atualizacoes, comunicados e alertas do Portal Societario</div>
+    </div>
+    {% if notificacoes.total_nao_lidas > 0 %}
+    <button onclick="lerTodas()" class="btn btn-outline btn-sm">
+      Marcar todas como lidas
+    </button>
+    {% endif %}
+  </div>
+
+  {% set nao_lidas = notificacoes.nao_lidas %}
+  {% set lidas     = notificacoes.lidas %}
+
+  {% if not nao_lidas and not lidas %}
+  <div class="notif-empty-state">
+    <div class="notif-empty-icon">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
+        <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
+      </svg>
+    </div>
+    <div class="notif-empty-title">Tudo em dia!</div>
+    <div class="notif-empty-sub">Nenhuma notificacao no momento.</div>
+  </div>
+  {% else %}
+  <div class="notif-page-list">
+    {% if nao_lidas %}
+    <div class="section-divider">Nao lidas ({{ nao_lidas|length }})</div>
+    {% for n in nao_lidas %}
+    <div class="notif-row nao-lida" data-id="{{ n.id }}" onclick="marcarLida({{ n.id }}, '{{ n.link_destino or '' }}')">
+      <div class="nr-dot-wrap"><div class="nr-dot"></div></div>
+      <div class="nr-body">
+        <div class="nr-titulo">{{ n.titulo }}</div>
+        {% if n.descricao %}
+        <div class="nr-desc">{{ n.descricao }}</div>
+        {% endif %}
+        <div class="nr-meta">{{ n.data_criacao[:16] if n.data_criacao else '' }}</div>
+      </div>
+      {% if n.link_destino %}
+      <div class="nr-actions">
+        <a href="{{ n.link_destino }}" class="nr-link" onclick="event.stopPropagation()">
+          Abrir
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+        </a>
+      </div>
+      {% endif %}
+    </div>
+    {% endfor %}
+    {% endif %}
+
+    {% if lidas %}
+    <div class="section-divider" style="margin-top:12px;">Lidas</div>
+    {% for n in lidas %}
+    <div class="notif-row" data-id="{{ n.id }}">
+      <div class="nr-dot-wrap"><div class="nr-dot lida"></div></div>
+      <div class="nr-body">
+        <div class="nr-titulo" style="color:var(--muted);font-weight:500;">{{ n.titulo }}</div>
+        {% if n.descricao %}
+        <div class="nr-desc">{{ n.descricao }}</div>
+        {% endif %}
+        <div class="nr-meta">{{ n.data_criacao[:16] if n.data_criacao else '' }}</div>
+      </div>
+      {% if n.link_destino %}
+      <div class="nr-actions">
+        <a href="{{ n.link_destino }}" class="nr-link">
+          Abrir
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+        </a>
+      </div>
+      {% endif %}
+    </div>
+    {% endfor %}
+    {% endif %}
+  </div>
+  {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+function marcarLida(id, link) {
+  fetch('/api/notificacoes/' + id + '/ler', { method: 'POST' })
+    .then(function() { if (link) window.location.href = link; else location.reload(); });
+}
+function lerTodas() {
+  fetch('/api/notificacoes/ler-todas', { method: 'POST' })
+    .then(function() { location.reload(); });
+}
+</script>
+{% endblock %}

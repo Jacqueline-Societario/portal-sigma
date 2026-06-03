@@ -1,0 +1,374 @@
+{% extends 'base.html' %}
+{% block title %}Minhas Passkeys{% endblock %}
+
+{% block content %}
+<div class="page-header" style="margin-bottom:24px;">
+  <h2 style="font-size:22px;font-weight:700;color:#222;">Seguranca — Passkeys</h2>
+  <p style="font-size:14px;color:#666;margin-top:4px;">
+    Gerencie suas formas de acesso seguro ao portal.
+  </p>
+</div>
+
+<!-- Banner informativo -->
+<div style="background:#f0f7ff;border:1px solid #bfdbfe;border-radius:10px;padding:16px 20px;margin-bottom:28px;">
+  <strong style="color:#1d4ed8;font-size:14px;">O que e uma passkey?</strong>
+  <p style="font-size:13px;color:#374151;margin-top:6px;line-height:1.6;">
+    Uma passkey permite que voce acesse o portal usando a biometria (digital, rosto),
+    PIN ou senha do seu dispositivo — sem precisar digitar senha a cada login suspeito.
+    E mais seguro e muito mais pratico que codigos por e-mail.
+  </p>
+</div>
+
+<!-- Passkeys cadastradas -->
+<div class="card" style="margin-bottom:24px;">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
+    <h3 style="font-size:16px;font-weight:700;">Passkeys cadastradas</h3>
+    <button class="btn-sm btn-red" onclick="abrirModalCadastro()">+ Adicionar passkey</button>
+  </div>
+
+  {% if passkeys %}
+    <div id="lista-passkeys">
+      {% for pk in passkeys %}
+      <div class="passkey-item" id="pk-{{ pk.id }}">
+        <div style="display:flex;align-items:center;gap:14px;">
+          <span style="font-size:28px;">&#x1F511;</span>
+          <div style="flex:1;">
+            <div style="font-weight:600;font-size:14px;color:#111;" id="pk-nome-{{ pk.id }}">{{ pk.name }}</div>
+            <div style="font-size:12px;color:#888;margin-top:2px;">
+              Cadastrada em {{ pk.created_at[:10] }}
+              {% if pk.last_used_at %}
+                &middot; Ultimo uso: {{ pk.last_used_at[:16].replace('T',' ') }}
+              {% endif %}
+              {% if pk.aaguid %}
+                &middot; <span style="font-family:monospace;font-size:11px;">{{ pk.aaguid[:8] }}...</span>
+              {% endif %}
+            </div>
+          </div>
+          <div style="display:flex;gap:8px;flex-shrink:0;">
+            <button class="btn-sm" onclick="renomear({{ pk.id }}, '{{ pk.name | e }}')">Renomear</button>
+            {% if passkeys | length > 1 %}
+            <button class="btn-sm btn-danger" onclick="remover({{ pk.id }}, '{{ pk.name | e }}')">Remover</button>
+            {% else %}
+            <button class="btn-sm btn-danger" disabled title="Mantenha ao menos uma passkey">Remover</button>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  {% else %}
+    <div style="text-align:center;padding:32px 0;color:#888;">
+      <span style="font-size:40px;display:block;margin-bottom:12px;">&#x1F511;</span>
+      <p style="font-size:14px;">Voce ainda nao tem passkeys cadastradas.</p>
+      <button class="btn-sm btn-red" style="margin-top:12px;" onclick="abrirModalCadastro()">Cadastrar agora</button>
+    </div>
+  {% endif %}
+</div>
+
+<!-- Dispositivos confiáveis -->
+<div class="card" style="margin-bottom:24px;">
+  <h3 style="font-size:16px;font-weight:700;margin-bottom:16px;">Dispositivos confiados</h3>
+  <p style="font-size:13px;color:#666;margin-bottom:16px;">
+    Dispositivos onde voce confirmou sua identidade com passkey.
+    Voce nao precisara verificar novamente nesses dispositivos enquanto o prazo estiver valido.
+  </p>
+
+  {% if devices %}
+    {% for dev in devices %}
+    <div class="device-item" id="dev-{{ dev.id }}">
+      <div style="display:flex;align-items:center;gap:12px;">
+        <span style="font-size:24px;">&#x1F4BB;</span>
+        <div style="flex:1;">
+          <div style="font-weight:600;font-size:14px;">{{ dev.device_name or 'Dispositivo' }}</div>
+          <div style="font-size:12px;color:#888;margin-top:2px;">
+            IP {{ dev.ip or '-' }}
+            &middot; Confiado em {{ dev.created_at[:10] }}
+            &middot; Expira em {{ dev.expires_at[:10] }}
+            {% if dev.last_seen_at %}
+              &middot; Ultimo uso: {{ dev.last_seen_at[:10] }}
+            {% endif %}
+          </div>
+        </div>
+        <button class="btn-sm btn-danger" onclick="revogarDispositivo({{ dev.id }})">Revogar</button>
+      </div>
+    </div>
+    {% endfor %}
+  {% else %}
+    <p style="font-size:13px;color:#aaa;text-align:center;padding:16px 0;">Nenhum dispositivo confiado ainda.</p>
+  {% endif %}
+</div>
+
+<!-- Modal: cadastrar passkey -->
+<div id="modal-cadastro" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.4);z-index:1000;align-items:center;justify-content:center;">
+  <div style="background:#fff;border-radius:16px;padding:40px;width:100%;max-width:420px;text-align:center;position:relative;">
+    <h3 style="font-size:18px;font-weight:700;margin-bottom:8px;">Adicionar passkey</h3>
+    <p style="font-size:13px;color:#666;margin-bottom:20px;">
+      Seu dispositivo pedira confirmacao (biometria, PIN ou senha). Salve a passkey para acessar o portal com facilidade.
+    </p>
+    <div style="margin-bottom:16px;text-align:left;">
+      <label style="font-size:13px;font-weight:600;color:#444;display:block;margin-bottom:6px;">
+        Nome amigavel (opcional)
+      </label>
+      <input type="text" id="novoNome" placeholder='ex: "Notebook do escritorio", "iPhone"'
+        style="width:100%;padding:10px 12px;border:1.5px solid #ddd;border-radius:8px;font-size:14px;outline:none;"
+        maxlength="80">
+    </div>
+    <div id="erro-cadastro" style="display:none;background:#fef2f2;border:1px solid #fca5a5;color:#dc2626;border-radius:8px;padding:10px 12px;font-size:13px;margin-bottom:12px;text-align:left;"></div>
+    <div id="sucesso-cadastro" style="display:none;background:#f0fdf4;border:1px solid #86efac;color:#16a34a;border-radius:8px;padding:10px 12px;font-size:13px;margin-bottom:12px;text-align:left;"></div>
+    <button class="btn-sm btn-red" style="width:100%;padding:12px;font-size:15px;" id="btnCadastrar" onclick="cadastrar()">
+      Cadastrar passkey
+    </button>
+    <button onclick="fecharModalCadastro()" style="margin-top:10px;background:none;border:none;font-size:13px;color:#888;cursor:pointer;text-decoration:underline;">
+      Cancelar
+    </button>
+  </div>
+</div>
+
+<!-- Modal: renomear -->
+<div id="modal-renomear" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.4);z-index:1000;align-items:center;justify-content:center;">
+  <div style="background:#fff;border-radius:16px;padding:36px;width:100%;max-width:380px;text-align:center;">
+    <h3 style="font-size:17px;font-weight:700;margin-bottom:12px;">Renomear passkey</h3>
+    <input type="hidden" id="renomearId">
+    <input type="text" id="renomearNome" style="width:100%;padding:10px 12px;border:1.5px solid #ddd;border-radius:8px;font-size:14px;margin-bottom:14px;outline:none;" maxlength="80">
+    <div style="display:flex;gap:8px;">
+      <button onclick="confirmarRenomear()" class="btn-sm btn-red" style="flex:1;padding:11px;font-size:14px;">Salvar</button>
+      <button onclick="fecharModalRenomear()" class="btn-sm" style="flex:1;padding:11px;font-size:14px;">Cancelar</button>
+    </div>
+  </div>
+</div>
+
+<style>
+  .card {
+    background: #fff;
+    border-radius: 12px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.07);
+    padding: 24px;
+    margin-bottom: 20px;
+  }
+  .passkey-item, .device-item {
+    padding: 14px 0;
+    border-bottom: 1px solid #f0f0f0;
+  }
+  .passkey-item:last-child, .device-item:last-child { border-bottom: none; }
+  .btn-sm {
+    padding: 7px 14px;
+    border-radius: 7px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    border: 1.5px solid #ddd;
+    background: #fff;
+    color: #444;
+    transition: all .15s;
+  }
+  .btn-sm:hover { border-color: #999; }
+  .btn-sm:disabled { opacity: .4; cursor: not-allowed; }
+  .btn-red { background: #A72C31; color: #fff; border-color: #A72C31; }
+  .btn-red:hover { background: #7a1f23; }
+  .btn-danger { color: #dc2626; border-color: #fca5a5; }
+  .btn-danger:hover { background: #fef2f2; }
+</style>
+
+<script>
+  // ── Utilitários WebAuthn ───────────────────────────────────────────────────
+
+  function b64uToBuffer(b64u) {
+    const b64  = b64u.replace(/-/g, '+').replace(/_/g, '/');
+    const bin  = atob(b64);
+    const buf  = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i++) buf[i] = bin.charCodeAt(i);
+    return buf.buffer;
+  }
+
+  function bufToB64u(buf) {
+    const bytes = new Uint8Array(buf);
+    let bin = '';
+    for (const b of bytes) bin += String.fromCharCode(b);
+    return btoa(bin).replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
+  }
+
+  // ── Cadastrar passkey ─────────────────────────────────────────────────────
+
+  function abrirModalCadastro() {
+    document.getElementById('modal-cadastro').style.display = 'flex';
+    document.getElementById('novoNome').value = '';
+    document.getElementById('erro-cadastro').style.display = 'none';
+    document.getElementById('sucesso-cadastro').style.display = 'none';
+    document.getElementById('btnCadastrar').disabled = false;
+    document.getElementById('novoNome').focus();
+  }
+
+  function fecharModalCadastro() {
+    document.getElementById('modal-cadastro').style.display = 'none';
+  }
+
+  async function cadastrar() {
+    const nomeFriendly = document.getElementById('novoNome').value.trim() || 'Minha passkey';
+    const errEl = document.getElementById('erro-cadastro');
+    const okEl  = document.getElementById('sucesso-cadastro');
+    const btn   = document.getElementById('btnCadastrar');
+    errEl.style.display = 'none';
+    okEl.style.display  = 'none';
+    btn.disabled = true;
+    btn.textContent = 'Aguardando dispositivo...';
+
+    try {
+      // 1. Pedir opções de registro
+      const r1 = await fetch('/webauthn/register-begin', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({}),
+      });
+      if (!r1.ok) {
+        const d = await r1.json();
+        errEl.textContent = d.erro || 'Erro ao iniciar cadastro.';
+        errEl.style.display = 'block';
+        btn.disabled = false;
+        btn.textContent = 'Cadastrar passkey';
+        return;
+      }
+      const options = await r1.json();
+
+      // 2. Converter base64url → ArrayBuffer
+      options.challenge = b64uToBuffer(options.challenge);
+      options.user.id   = b64uToBuffer(options.user.id);
+      if (options.excludeCredentials) {
+        options.excludeCredentials = options.excludeCredentials.map(c => ({
+          ...c, id: b64uToBuffer(c.id),
+        }));
+      }
+
+      // 3. Chamar WebAuthn no navegador
+      let credential;
+      try {
+        credential = await navigator.credentials.create({ publicKey: options });
+      } catch (e) {
+        errEl.textContent = e.name === 'NotAllowedError'
+          ? 'Cadastro cancelado ou nao autorizado.'
+          : 'Erro ao cadastrar: ' + e.message;
+        errEl.style.display = 'block';
+        btn.disabled = false;
+        btn.textContent = 'Cadastrar passkey';
+        return;
+      }
+
+      // 4. Enviar resposta ao servidor
+      const credJson = {
+        id:            credential.id,
+        rawId:         bufToB64u(credential.rawId),
+        type:          credential.type,
+        friendly_name: nomeFriendly,
+        response: {
+          attestationObject: bufToB64u(credential.response.attestationObject),
+          clientDataJSON:    bufToB64u(credential.response.clientDataJSON),
+        },
+      };
+      if (credential.response.getTransports) {
+        credJson.response.transports = credential.response.getTransports();
+      }
+
+      const r2 = await fetch('/webauthn/register-complete', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify(credJson),
+      });
+      const result = await r2.json();
+
+      if (!r2.ok || !result.ok) {
+        errEl.textContent = result.erro || 'Falha ao salvar passkey.';
+        errEl.style.display = 'block';
+        btn.disabled = false;
+        btn.textContent = 'Cadastrar passkey';
+        return;
+      }
+
+      // 5. Sucesso
+      okEl.textContent = 'Passkey "' + result.nome + '" cadastrada com sucesso!';
+      okEl.style.display = 'block';
+      btn.textContent = 'Passkey salva!';
+      setTimeout(() => location.reload(), 1500);
+
+    } catch (e) {
+      errEl.textContent = 'Erro inesperado: ' + e.message;
+      errEl.style.display = 'block';
+      btn.disabled = false;
+      btn.textContent = 'Cadastrar passkey';
+    }
+  }
+
+  // ── Renomear ──────────────────────────────────────────────────────────────
+
+  function renomear(id, nomeAtual) {
+    document.getElementById('renomearId').value = id;
+    document.getElementById('renomearNome').value = nomeAtual;
+    document.getElementById('modal-renomear').style.display = 'flex';
+    document.getElementById('renomearNome').focus();
+  }
+
+  function fecharModalRenomear() {
+    document.getElementById('modal-renomear').style.display = 'none';
+  }
+
+  async function confirmarRenomear() {
+    const id   = document.getElementById('renomearId').value;
+    const nome = document.getElementById('renomearNome').value.trim();
+    if (!nome) return;
+
+    const r = await fetch('/passkeys/renomear', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ id, name: nome }),
+    });
+    if (r.ok) {
+      document.getElementById('pk-nome-' + id).textContent = nome;
+      fecharModalRenomear();
+    } else {
+      alert('Erro ao renomear. Tente novamente.');
+    }
+  }
+
+  // ── Remover passkey ────────────────────────────────────────────────────────
+
+  async function remover(id, nome) {
+    if (!confirm('Remover a passkey "' + nome + '"?\n\nVoce precisara ter outra passkey para acessar o portal.')) return;
+
+    const r = await fetch('/passkeys/remover', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ id }),
+    });
+    const data = await r.json();
+
+    if (data.stepup_required) {
+      if (confirm('Por seguranca, confirme sua identidade com a passkey antes de remover.')) {
+        window.location.href = data.verify_url || '/webauthn/verify?purpose=stepup&next=/passkeys/';
+      }
+      return;
+    }
+    if (!r.ok || !data.ok) {
+      alert(data.erro || 'Erro ao remover passkey.');
+      return;
+    }
+    const el = document.getElementById('pk-' + id);
+    if (el) el.remove();
+  }
+
+  // ── Revogar dispositivo ────────────────────────────────────────────────────
+
+  async function revogarDispositivo(id) {
+    if (!confirm('Revogar este dispositivo?\n\nVoce precisara confirmar sua identidade novamente ao acessar por ele.')) return;
+
+    const r = await fetch('/passkeys/dispositivos/revogar', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ id }),
+    });
+    if (r.ok) {
+      const el = document.getElementById('dev-' + id);
+      if (el) el.remove();
+    } else {
+      alert('Erro ao revogar dispositivo.');
+    }
+  }
+</script>
+{% endblock %}

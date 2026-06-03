@@ -1,0 +1,276 @@
+{% extends "base.html" %}
+{% block title %}Movimentação de Empresas{% endblock %}
+{% block page_title %}Movimentação de Empresas{% endblock %}
+
+{% block extra_styles %}
+.mov-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 24px;
+  padding: 14px 18px;
+  background: #fff;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  font-size: 13px;
+  color: var(--muted);
+}
+.mov-meta strong { color: var(--text); }
+.btn-verificar {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 7px 16px; border-radius: 6px;
+  background: var(--sigma-red); color: #fff;
+  font-size: 13px; font-weight: 600; border: none; cursor: pointer;
+  transition: background .15s;
+}
+.btn-verificar:hover { background: var(--sigma-dark); }
+.btn-verificar:disabled { background: #ccc; cursor: not-allowed; }
+
+.mov-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+}
+@media (max-width: 900px) { .mov-grid { grid-template-columns: 1fr; } }
+
+.mov-col-title {
+  font-size: 15px; font-weight: 700;
+  margin-bottom: 14px;
+  padding-bottom: 8px;
+  border-bottom: 2px solid;
+  display: flex; align-items: center; gap: 8px;
+}
+.col-entrada .mov-col-title { color: #166534; border-color: #22c55e; }
+.col-saida   .mov-col-title { color: #991b1b; border-color: #ef4444; }
+
+.mov-card {
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 16px 18px;
+  margin-bottom: 14px;
+  position: relative;
+}
+.col-entrada .mov-card { border-left: 4px solid #22c55e; }
+.col-saida   .mov-card { border-left: 4px solid #ef4444; }
+
+.mov-card-header {
+  font-size: 14px; font-weight: 700;
+  color: var(--text);
+  margin-bottom: 10px;
+  line-height: 1.4;
+}
+.mov-badge-cod {
+  display: inline-block;
+  background: #f0f0f0; color: #555;
+  font-size: 11px; font-weight: 700;
+  padding: 2px 8px; border-radius: 4px;
+  margin-right: 6px;
+}
+.mov-field { font-size: 13px; color: var(--muted); margin-bottom: 5px; }
+.mov-field strong { color: var(--text); }
+
+.contatos-box {
+  margin-top: 10px;
+  background: #f9f9f9;
+  border: 1px solid #eee;
+  border-radius: 6px;
+  padding: 10px 12px;
+}
+.contatos-box .ctitle {
+  font-size: 11px; font-weight: 700; text-transform: uppercase;
+  letter-spacing: 0.5px; color: #999; margin-bottom: 6px;
+}
+.contato-linha {
+  font-size: 13px; color: #333;
+  padding: 3px 0;
+  border-bottom: 1px solid #eee;
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 8px;
+}
+.contato-linha:last-child { border-bottom: none; }
+.contato-texto { flex: 1; }
+.btn-copiar {
+  background: none; border: 1px solid #ddd;
+  border-radius: 4px; padding: 2px 8px;
+  font-size: 11px; color: #888; cursor: pointer;
+  white-space: nowrap;
+  transition: all .15s;
+}
+.btn-copiar:hover { background: #f0f0f0; color: #333; }
+.btn-copiar.copiado { border-color: #22c55e; color: #166534; }
+
+.grupo-tag {
+  display: inline-block;
+  margin-top: 8px;
+  background: #eff6ff; color: #1d4ed8;
+  font-size: 11px; font-weight: 600;
+  padding: 3px 10px; border-radius: 99px;
+}
+
+.mov-data {
+  position: absolute; top: 12px; right: 14px;
+  font-size: 11px; color: #bbb;
+}
+
+.empty-col {
+  text-align: center; color: #bbb;
+  padding: 40px 20px; font-size: 14px;
+  background: #fff; border: 1px dashed #ddd;
+  border-radius: 8px;
+}
+{% endblock %}
+
+{% block content %}
+
+<!-- Barra superior: última verificação + botão -->
+<div class="mov-meta">
+  <div>
+    {% if ultima_verificacao %}
+      Última verificação:
+      <strong>{{ ultima_verificacao.verificado_em[:16] | replace('T', ' ') }}</strong>
+      &nbsp;—&nbsp; {{ novos_total }} novo(s) na última checagem
+    {% else %}
+      Nenhuma verificação realizada ainda.
+    {% endif %}
+    &nbsp;
+    <span style="font-size:12px; color:#bbb;">(verifica automaticamente a cada 1 hora)</span>
+  </div>
+  <button class="btn-verificar" id="btnVerificar" onclick="verificarAgora()">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+      <polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>
+    </svg>
+    Verificar agora
+  </button>
+</div>
+
+<!-- Grid: Entradas | Saídas -->
+<div class="mov-grid">
+
+  <!-- ── Coluna Entradas ────────────────────────────── -->
+  <div class="col-entrada">
+    <div class="mov-col-title">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+        <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/>
+        <line x1="8" y1="12" x2="16" y2="12"/>
+      </svg>
+      Novas Entradas
+      <span style="margin-left:auto; font-size:12px; font-weight:400; color:#888;">
+        últimos 3 meses — {{ entradas|length }} empresa(s)
+      </span>
+    </div>
+
+    {% if entradas %}
+      {% for e in entradas %}
+      <div class="mov-card">
+        <div class="mov-data">{{ e.notificado_em[:10] | replace('-', '/') }}</div>
+        <div class="mov-card-header">{{ e.razao_social }}</div>
+
+        {% if e.primeira_competencia %}
+        <div class="mov-field">
+          <strong>1ª Competência:</strong> {{ e.primeira_competencia }}
+        </div>
+        {% endif %}
+
+        {% if e.grupo %}
+        <span class="grupo-tag">{{ e.grupo }}</span>
+        {% endif %}
+
+        {% if e.contatos_list %}
+        <div class="contatos-box">
+          <div class="ctitle">Contatos</div>
+          {% for c in e.contatos_list %}
+          <div class="contato-linha">
+            <span class="contato-texto">{{ c }}</span>
+            <button class="btn-copiar" onclick="copiar(this, '{{ c | replace("'", "\\'") }}')">
+              Copiar
+            </button>
+          </div>
+          {% endfor %}
+        </div>
+        {% endif %}
+      </div>
+      {% endfor %}
+    {% else %}
+      <div class="empty-col">Nenhuma entrada nos últimos 3 meses.</div>
+    {% endif %}
+  </div>
+
+  <!-- ── Coluna Saídas ──────────────────────────────── -->
+  <div class="col-saida">
+    <div class="mov-col-title">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+        <circle cx="12" cy="12" r="10"/><line x1="8" y1="12" x2="16" y2="12"/>
+      </svg>
+      Saídas
+      <span style="margin-left:auto; font-size:12px; font-weight:400; color:#888;">
+        últimos 3 meses — {{ saidas|length }} empresa(s)
+      </span>
+    </div>
+
+    {% if saidas %}
+      {% for s in saidas %}
+      <div class="mov-card">
+        <div class="mov-data">{{ s.notificado_em[:10] | replace('-', '/') }}</div>
+        <div class="mov-card-header">{{ s.nome_empresa }}</div>
+
+        {% if s.fim_competencia %}
+        <div class="mov-field">
+          <strong>Fim da Competência:</strong> {{ s.fim_competencia }}
+        </div>
+        {% endif %}
+
+        {% if s.motivo %}
+        <div class="mov-field">
+          <strong>Motivo:</strong> {{ s.motivo }}
+        </div>
+        {% endif %}
+      </div>
+      {% endfor %}
+    {% else %}
+      <div class="empty-col">Nenhuma saída nos últimos 3 meses.</div>
+    {% endif %}
+  </div>
+
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+function copiar(btn, texto) {
+  navigator.clipboard.writeText(texto).then(() => {
+    btn.textContent = 'Copiado!';
+    btn.classList.add('copiado');
+    setTimeout(() => {
+      btn.textContent = 'Copiar';
+      btn.classList.remove('copiado');
+    }, 2000);
+  });
+}
+
+function verificarAgora() {
+  const btn = document.getElementById('btnVerificar');
+  btn.disabled = true;
+  btn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="10"/></svg> Verificando...';
+
+  fetch('/movimentacao/verificar-agora', { method: 'POST' })
+    .then(r => r.json())
+    .then(data => {
+      if (data.ok) {
+        setTimeout(() => location.reload(), 800);
+      } else {
+        alert('Erro: ' + (data.erro || 'Erro desconhecido'));
+        btn.disabled = false;
+        btn.innerHTML = 'Verificar agora';
+      }
+    })
+    .catch(() => {
+      alert('Erro de conexão.');
+      btn.disabled = false;
+      btn.innerHTML = 'Verificar agora';
+    });
+}
+</script>
+{% endblock %}

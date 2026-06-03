@@ -1,0 +1,428 @@
+{% extends "base.html" %}
+{% block title %}{{ empresa.nome_empresa }}{% endblock %}
+{% block page_title %}{{ empresa.nome_empresa }}{% endblock %}
+
+{% block extra_styles %}
+.detalhe-card {
+  background: #fff; border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 28px; margin-bottom: 20px;
+}
+.detalhe-grid {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 20px;
+}
+.campo { }
+.campo-label {
+  font-size: 11px; font-weight: 700; text-transform: uppercase;
+  letter-spacing: .5px; color: var(--muted); margin-bottom: 4px;
+}
+.campo-valor { font-size: 14px; font-weight: 600; }
+.badge {
+  display: inline-block; padding: 3px 9px; border-radius: 4px;
+  font-size: 12px; font-weight: 700;
+}
+.badge.ok       { background: #dcfce7; color: #166534; }
+.badge.vencido  { background: #fee2e2; color: #991b1b; }
+.badge.vencendo { background: #fef9c3; color: #854d0e; }
+.badge.andamento{ background: #dbeafe; color: #1e40af; }
+.badge.isento   { background: #f3f4f6; color: #6b7280; }
+.badge.vazio    { background: #f3f4f6; color: #9ca3af; font-style: italic; }
+
+/* Edit mode */
+.edit-toggle-btn {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 7px 16px; border-radius: 6px;
+  background: var(--sigma-red); color: #fff;
+  font-size: 13px; font-weight: 600; border: none; cursor: pointer;
+  transition: background .15s;
+}
+.edit-toggle-btn:hover { background: var(--sigma-dark); }
+.edit-toggle-btn.cancel { background: #6b7280; }
+.edit-toggle-btn.cancel:hover { background: #374151; }
+
+.view-mode .edit-field-wrap { display: none; }
+.view-mode .view-campo { display: block; }
+.edit-mode .edit-field-wrap { display: block; }
+.edit-mode .view-campo { display: none; }
+
+.edit-field-wrap input,
+.edit-field-wrap select,
+.edit-field-wrap textarea {
+  width: 100%; padding: 7px 10px; border: 1px solid var(--border);
+  border-radius: 6px; font-size: 13px; color: var(--text);
+  background: #fafafa; outline: none;
+  transition: border-color .15s;
+}
+.edit-field-wrap input:focus,
+.edit-field-wrap select:focus,
+.edit-field-wrap textarea:focus {
+  border-color: var(--sigma-red); background: #fff;
+}
+
+.save-btn {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 10px 24px; border-radius: 6px;
+  background: #16a34a; color: #fff;
+  font-size: 14px; font-weight: 700; border: none; cursor: pointer;
+  transition: background .15s;
+}
+.save-btn:hover { background: #15803d; }
+.save-btn:disabled { background: #ccc; cursor: not-allowed; }
+
+.toast {
+  position: fixed; bottom: 24px; right: 24px; z-index: 9999;
+  padding: 12px 20px; border-radius: 8px; font-size: 14px; font-weight: 600;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.15); display: none;
+}
+.toast.success { background: #dcfce7; color: #166534; border: 1px solid #86efac; }
+.toast.error   { background: #fee2e2; color: #991b1b; border: 1px solid #fca5a5; }
+.campo-info-icon {
+  width: 12px; height: 12px; vertical-align: middle;
+  margin-left: 3px; color: var(--muted); cursor: help;
+  opacity: .6; display: inline;
+}
+.campo-manual-link {
+  display: inline-flex; align-items: center; gap: 4px;
+  font-size: 12px; color: var(--sigma-red); text-decoration: none;
+  margin-bottom: 10px;
+}
+.campo-manual-link:hover { text-decoration: underline; }
+{% endblock %}
+
+{% block content %}
+<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:10px;">
+  <a href="{{ url_for('empresas.index') }}" class="btn btn-outline btn-sm">← Voltar</a>
+  {% if pode_editar %}
+  <div style="display:flex;gap:8px;">
+    <button class="edit-toggle-btn" id="btnEditar" onclick="toggleEdit()">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+        <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+        <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+      </svg>
+      Editar
+    </button>
+    <button class="edit-toggle-btn cancel" id="btnCancelar" style="display:none;" onclick="toggleEdit()">
+      Cancelar
+    </button>
+    <button class="save-btn" id="btnSalvar" style="display:none;" onclick="salvar()">
+      Salvar alterações
+    </button>
+  </div>
+  {% endif %}
+</div>
+
+<div style="margin-bottom:12px;">
+  <a href="https://societario.gsigma.com.br/manuais/13" target="_blank" class="campo-manual-link">
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+    Consultar padrão de preenchimento
+  </a>
+</div>
+
+<form id="formEmpresa" class="view-mode">
+
+<div class="detalhe-card">
+  <div style="margin-bottom:20px;">
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;">
+      <div class="edit-field-wrap" style="width:180px;">
+        <select name="aba" id="f_aba">
+          {% set _aba_labels = {'ATIVAS': 'Ativa', 'INATIVAS': 'Inativa', 'NÃO MENSAIS': 'Avulso'} %}
+          {% for a in abas_lista %}
+          <option value="{{ a }}" {% if empresa.aba == a %}selected{% endif %}>{{ _aba_labels.get(a, a) }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="view-campo">
+        {% if empresa.aba == 'ATIVAS' %}
+          <span class="badge ok" style="font-size:12px;padding:4px 12px;">Ativa</span>
+        {% elif empresa.aba == 'INATIVAS' %}
+          <span class="badge vencido" style="font-size:12px;padding:4px 12px;">Inativa</span>
+        {% elif empresa.aba == 'NÃO MENSAIS' %}
+          <span class="badge andamento" style="font-size:12px;padding:4px 12px;">Avulso</span>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- Nome -->
+    <div class="campo-label" style="margin-bottom:6px;">Nome da Empresa</div>
+    <div class="view-campo" style="font-size:18px;font-weight:700;margin-bottom:8px;">{{ empresa.nome_empresa }}</div>
+    <div class="edit-field-wrap" style="margin-bottom:8px;">
+      <input type="text" name="nome_empresa" id="f_nome" value="{{ empresa.nome_empresa }}">
+    </div>
+
+    <!-- CNPJ -->
+    <div class="campo-label" style="margin-bottom:4px;">CNPJ/CPF</div>
+    <div class="view-campo" style="font-family:monospace;font-size:16px;font-weight:700;">{{ empresa.cnpj_cpf or '—' }}</div>
+    <div class="edit-field-wrap">
+      <input type="text" name="cnpj_cpf" id="f_cnpj" value="{{ empresa.cnpj_cpf or '' }}">
+    </div>
+  </div>
+
+  <div class="detalhe-grid" style="margin-top:16px;">
+    {% set campos_info = [
+      ('Atuação', 'atuacao', empresa.atuacao, 'text', None),
+      ('Escritório', 'escritorio', empresa.escritorio, 'text', None),
+      ('Município', 'municipio', empresa.municipio, 'text', None),
+      ('Código Domínio', 'codigo_dominio', empresa.codigo_dominio, 'text', None),
+    ] %}
+    {% for label, campo, valor, tipo, _ in campos_info %}
+    <div class="campo">
+      <div class="campo-label">{{ label }}</div>
+      <div class="view-campo campo-valor">{{ valor or '—' }}</div>
+      <div class="edit-field-wrap">
+        <input type="{{ tipo }}" name="{{ campo }}" id="f_{{ campo }}" value="{{ valor or '' }}">
+      </div>
+    </div>
+    {% endfor %}
+
+    <!-- Responsável -->
+    <div class="campo">
+      <div class="campo-label">Responsável
+        <span title="Usar o nome padronizado da responsável, sem abreviações, apelidos ou iniciais."><svg class="campo-info-icon" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"/></svg></span>
+      </div>
+      <div class="view-campo campo-valor" style="display:flex;align-items:center;gap:6px;">
+        {% if empresa.responsavel %}
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#A72C31" stroke-width="2.2" style="flex-shrink:0">
+            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+            <circle cx="12" cy="7" r="4"/>
+          </svg>
+          <span>{{ empresa.responsavel }}</span>
+        {% else %}
+          <span style="color:#ccc;">—</span>
+        {% endif %}
+      </div>
+      <div class="edit-field-wrap">
+        <input type="text" name="responsavel" id="f_responsavel" value="{{ empresa.responsavel or '' }}" placeholder="Ex.: Beatriz Moreira">
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="detalhe-card">
+  <h3 style="font-size:14px;font-weight:700;color:var(--sigma-red);margin-bottom:10px;border-bottom:1px solid var(--border);padding-bottom:8px;">
+    Documentos e Licenças
+  </h3>
+  <div class="detalhe-grid">
+    {% set _ph_docs = {
+      'alvara_funcionamento': 'Ex.: 15/08/2026 ou Em andamento',
+      'visa':                 'Ex.: 31/12/2026 ou Isento',
+      'cnes':                 'Ex.: 1234567 ou Não se aplica',
+      'venc_bombeiro':        'Ex.: 07/03/2026 ou Em andamento',
+      'prot_bombeiro':        'Ex.: 8524/25',
+      'licenca_ambiental':    'Ex.: 15/08/2026 ou Isento',
+      'publicidade':          'Ex.: 15/08/2026 ou Não possui',
+      'tpi':                  'Ex.: Pagante ou Isento',
+    } %}
+    {% set _tt_docs = {
+      'alvara_funcionamento': 'Use data, Em andamento, Não possui, Não se aplica, Isento ou Revisar cadastro. Não usar: Em dia, OK, Vigente, Pendente.',
+      'visa':                 'Use data, Em andamento, Não possui, Não se aplica, Isento ou Revisar cadastro. Não usar: Em dia, OK, Vigente, Pendente.',
+      'cnes':                 'Use número do CNES, Em andamento, Não se aplica, Irregular ou deixe em branco.',
+      'venc_bombeiro':        'Use data, Em andamento, Não possui, Não se aplica, Isento, Válido indeterminado ou Revisar cadastro.',
+      'prot_bombeiro':        'Preencher somente o número do protocolo. Se isento ou dispensado, usar Isento. Se não houver protocolo, deixar em branco. Não usar: Em andamento, Aguardando, Processo aberto.',
+      'licenca_ambiental':    'Use data, Em andamento, Não possui, Não se aplica, Isento ou Revisar cadastro. Não usar: Vigente, OK, Pendente.',
+      'publicidade':          'Use data, Em andamento, Não possui, Não se aplica, Isento, Irregular ou Revisar cadastro. Não usar: OK, Pendente, Em dia, Vigente.',
+      'tpi':                  'Use Pagante, Isento, Não se aplica ou deixe em branco. Não usar valor em R$, vencimento, protocolo ou Em andamento.',
+    } %}
+    {% set campos_docs = [
+      ('Alvará de Funcionamento', 'alvara_funcionamento', empresa.alvara_funcionamento),
+      ('VISA', 'visa', empresa.visa),
+      ('CNES', 'cnes', empresa.cnes),
+      ('Bombeiro — Vencimento', 'venc_bombeiro', empresa.venc_bombeiro),
+      ('Bombeiro — Protocolo', 'prot_bombeiro', empresa.prot_bombeiro),
+      ('Licença Ambiental', 'licenca_ambiental', empresa.licenca_ambiental),
+      ('Publicidade', 'publicidade', empresa.publicidade),
+      ('TPI', 'tpi', empresa.tpi),
+    ] %}
+    {% for label, campo, valor in campos_docs %}
+    <div class="campo">
+      <div class="campo-label">{{ label }}
+        {% if _tt_docs.get(campo) %}
+        <span title="{{ _tt_docs[campo] }}"><svg class="campo-info-icon" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"/></svg></span>
+        {% endif %}
+      </div>
+      <div class="view-campo campo-valor">
+        {% set cor = status_cor(valor) %}
+        {% if valor %}
+          <span class="badge {{ cor }}">{{ valor }}</span>
+        {% else %}
+          <span style="color:#ccc;">—</span>
+        {% endif %}
+      </div>
+      <div class="edit-field-wrap">
+        <input type="text" name="{{ campo }}" id="f_{{ campo }}" value="{{ valor or '' }}"
+               placeholder="{{ _ph_docs.get(campo, '') }}">
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+
+<div class="detalhe-card">
+  <h3 style="font-size:14px;font-weight:700;color:var(--sigma-red);margin-bottom:18px;border-bottom:1px solid var(--border);padding-bottom:8px;">
+    Representação da Empresa
+  </h3>
+  <div class="detalhe-grid">
+    <div class="campo">
+      <div class="campo-label">Procuração
+        <span title="Use Assinada eletronicamente, Assinada cartório, Em andamento, Cliente não enviou ou Não possui."><svg class="campo-info-icon" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"/></svg></span>
+      </div>
+      {% set cor_p = 'ok' if empresa.procuracao in ['Sim','sim'] else ('andamento' if 'Aguardando' in (empresa.procuracao or '') else 'vencido') %}
+      <div class="view-campo">
+        <span class="badge {{ cor_p }}" style="font-size:14px; padding:6px 14px;">
+          {{ empresa.procuracao or 'Sem informação' }}
+        </span>
+      </div>
+      <div class="edit-field-wrap">
+        <input type="text" name="procuracao" id="f_procuracao" value="{{ empresa.procuracao or '' }}"
+               placeholder="Ex.: Assinada cartório">
+      </div>
+    </div>
+    <div class="campo">
+      <div class="campo-label">Certificado Digital
+        <span title="Use A1 - data, A3 - data, Em andamento, Não possui ou Cliente não enviou. Não usar: A1 válido até 12/2025, OK, tem certificado."><svg class="campo-info-icon" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"/></svg></span>
+      </div>
+      <div class="view-campo campo-valor">{{ empresa.certificado_digital or '—' }}</div>
+      <div class="edit-field-wrap">
+        <input type="text" name="certificado_digital" id="f_certificado_digital" value="{{ empresa.certificado_digital or '' }}" placeholder="Ex.: A1 - 15/12/2025">
+      </div>
+    </div>
+    {% if empresa.motivo_inativa or empresa.aba == 'INATIVAS' %}
+    <div class="campo">
+      <div class="campo-label">Motivo (Inativa)</div>
+      <div class="view-campo campo-valor">{{ empresa.motivo_inativa or '—' }}</div>
+      <div class="edit-field-wrap">
+        <input type="text" name="motivo_inativa" id="f_motivo_inativa" value="{{ empresa.motivo_inativa or '' }}">
+      </div>
+    </div>
+    {% endif %}
+  </div>
+</div>
+
+<!-- Observações -->
+<div class="detalhe-card">
+  <h3 style="font-size:14px;font-weight:700;color:var(--sigma-red);margin-bottom:18px;border-bottom:1px solid var(--border);padding-bottom:8px;">
+    Observações
+    <span title="Use para registrar contexto relevante da empresa ou do cliente: imóvel, proprietário, contatos, forma de comunicação, dificuldades, histórico ou orientações para atendimento."><svg class="campo-info-icon" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"/></svg></span>
+  </h3>
+  <div class="campo">
+    <!-- View mode -->
+    <div class="view-campo" style="white-space:pre-wrap;font-size:14px;color:var(--text);line-height:1.6;min-height:40px;">
+      {{ empresa.observacoes or '' }}
+      {% if not empresa.observacoes %}<span style="color:#ccc;font-style:italic;">Nenhuma observação registrada.</span>{% endif %}
+    </div>
+    <!-- Edit mode -->
+    <div class="edit-field-wrap">
+      <textarea id="f_observacoes" name="observacoes" maxlength="500"
+        rows="4" style="resize:vertical;"
+        oninput="atualizarContador()"
+        placeholder="Ex.: particularidades da empresa, imóvel, contatos ou orientações importantes.">{{ empresa.observacoes or '' }}</textarea>
+      <div style="text-align:right;font-size:11px;color:var(--muted);margin-top:4px;">
+        <span id="obs_count">{{ (empresa.observacoes or '')|length }}</span>/500 caracteres
+      </div>
+    </div>
+  </div>
+</div>
+
+</form>
+
+<div style="font-size:12px;color:var(--muted); margin-top:8px;">
+  Aba: {{ empresa.aba }} &bull; Atualizado: {{ empresa.atualizado_em[:16] if empresa.atualizado_em else '—' }}
+  {% if empresa.editado_em %}
+   &bull; Editado por {{ empresa.editado_por or '?' }} em {{ empresa.editado_em[:16] }}
+  {% endif %}
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+{% endblock %}
+
+{% block extra_scripts %}
+{% if pode_editar %}
+<script>
+let editando = false;
+
+function toggleEdit() {
+  editando = !editando;
+  const form = document.getElementById('formEmpresa');
+  const btnEditar   = document.getElementById('btnEditar');
+  const btnCancelar = document.getElementById('btnCancelar');
+  const btnSalvar   = document.getElementById('btnSalvar');
+
+  if (editando) {
+    form.classList.remove('view-mode');
+    form.classList.add('edit-mode');
+    btnEditar.style.display   = 'none';
+    btnCancelar.style.display = '';
+    btnSalvar.style.display   = '';
+  } else {
+    form.classList.remove('edit-mode');
+    form.classList.add('view-mode');
+    btnEditar.style.display   = '';
+    btnCancelar.style.display = 'none';
+    btnSalvar.style.display   = 'none';
+  }
+}
+
+function coletarCampos() {
+  const ids = [
+    'aba','nome_empresa','cnpj_cpf','atuacao','escritorio','municipio',
+    'codigo_dominio','alvara_funcionamento','visa','cnes','venc_bombeiro',
+    'prot_bombeiro','licenca_ambiental','publicidade','tpi','procuracao','motivo_inativa',
+    'observacoes','responsavel','certificado_digital'
+  ];
+  const dados = {};
+  ids.forEach(id => {
+    const el = document.getElementById('f_' + id);
+    if (el) dados[id] = id === 'observacoes' ? el.value : el.value.trim();
+  });
+  return dados;
+}
+
+function atualizarContador() {
+  const el = document.getElementById('f_observacoes');
+  const cnt = document.getElementById('obs_count');
+  if (el && cnt) cnt.textContent = el.value.length;
+}
+
+function mostrarToast(msg, tipo) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast ' + tipo;
+  t.style.display = 'block';
+  setTimeout(() => { t.style.display = 'none'; }, 3500);
+}
+
+async function salvar() {
+  const btn = document.getElementById('btnSalvar');
+  btn.disabled = true;
+  btn.textContent = 'Salvando...';
+
+  const dados = coletarCampos();
+  try {
+    const r = await fetch('/empresas/{{ empresa.id }}/editar', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify(dados),
+    });
+    const d = await r.json();
+    if (d.sucesso) {
+      mostrarToast('Alterações salvas com sucesso!', 'success');
+      // Atualizar valores exibidos sem reload
+      Object.entries(dados).forEach(([k, v]) => {
+        const viewEls = document.querySelectorAll(`.view-campo`);
+        // Reload simples após 800ms
+      });
+      setTimeout(() => location.reload(), 900);
+    } else {
+      mostrarToast('Erro: ' + (d.erro || 'Erro desconhecido'), 'error');
+      btn.disabled = false;
+      btn.textContent = 'Salvar alterações';
+    }
+  } catch(e) {
+    mostrarToast('Erro de conexão.', 'error');
+    btn.disabled = false;
+    btn.textContent = 'Salvar alterações';
+  }
+}
+</script>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,1271 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Elaboração de Contrato Social — Sigma Societário</title>
+<style>
+  :root {
+    --sigma: #A72C31;
+    --sigma-dark: #7a1f23;
+    --sigma-light: #f9f0f0;
+    --gray: #6b7280;
+    --border: #e5e7eb;
+    --bg: #f8f9fa;
+    --white: #ffffff;
+    --text: #1f2937;
+    --success: #059669;
+    --radius: 10px;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+  }
+
+  /* HEADER */
+  header {
+    background: var(--sigma);
+    color: white;
+    padding: 18px 40px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    box-shadow: 0 2px 8px rgba(167,44,49,0.3);
+  }
+  .logo-sigma {
+    width: 42px;
+    height: 42px;
+    background: white;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 900;
+    font-size: 18px;
+    color: var(--sigma);
+    letter-spacing: -1px;
+    flex-shrink: 0;
+  }
+  header h1 { font-size: 18px; font-weight: 700; }
+  header p { font-size: 12px; opacity: 0.85; margin-top: 2px; }
+
+  /* MAIN */
+  main {
+    max-width: 860px;
+    margin: 0 auto;
+    padding: 36px 20px 60px;
+  }
+
+  /* STEPS */
+  .steps {
+    display: flex;
+    gap: 0;
+    margin-bottom: 32px;
+    background: white;
+    border-radius: var(--radius);
+    border: 1px solid var(--border);
+    overflow: hidden;
+  }
+  .step {
+    flex: 1;
+    padding: 14px 16px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    border-right: 1px solid var(--border);
+    opacity: 0.4;
+    transition: all .3s;
+    font-size: 13px;
+    font-weight: 500;
+  }
+  .step:last-child { border-right: none; }
+  .step.active { opacity: 1; }
+  .step.done { opacity: 0.7; }
+  .step-num {
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    background: var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    font-weight: 700;
+    flex-shrink: 0;
+  }
+  .step.active .step-num { background: var(--sigma); color: white; }
+  .step.done .step-num { background: var(--success); color: white; }
+
+  /* CARDS */
+  .card {
+    background: white;
+    border-radius: var(--radius);
+    border: 1px solid var(--border);
+    padding: 28px;
+    margin-bottom: 20px;
+    display: none;
+  }
+  .card.active { display: block; }
+  .card h2 {
+    font-size: 17px;
+    font-weight: 700;
+    color: var(--sigma);
+    margin-bottom: 6px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .card h2 svg { flex-shrink: 0; }
+  .card p.subtitle {
+    font-size: 13px;
+    color: var(--gray);
+    margin-bottom: 22px;
+  }
+
+  /* UPLOAD AREA */
+  .upload-area {
+    border: 2px dashed var(--border);
+    border-radius: var(--radius);
+    padding: 40px 20px;
+    text-align: center;
+    cursor: pointer;
+    transition: all .2s;
+    position: relative;
+  }
+  .upload-area:hover, .upload-area.drag-over {
+    border-color: var(--sigma);
+    background: var(--sigma-light);
+  }
+  .upload-area input[type=file] {
+    position: absolute;
+    inset: 0;
+    opacity: 0;
+    cursor: pointer;
+  }
+  .upload-icon {
+    width: 52px;
+    height: 52px;
+    background: var(--sigma-light);
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 14px;
+  }
+  .upload-area h3 { font-size: 15px; font-weight: 600; margin-bottom: 6px; }
+  .upload-area p { font-size: 13px; color: var(--gray); }
+  .upload-area .formatos {
+    display: inline-flex;
+    gap: 8px;
+    margin-top: 14px;
+  }
+  .badge {
+    padding: 3px 10px;
+    border-radius: 99px;
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .5px;
+  }
+  .badge-pdf { background: #fee2e2; color: #dc2626; }
+  .badge-docx { background: #dbeafe; color: #2563eb; }
+  .badge-ok { background: #d1fae5; color: #059669; }
+
+  /* ARQUIVO CARREGADO */
+  .arquivo-info {
+    background: var(--sigma-light);
+    border: 1px solid #f5c2c4;
+    border-radius: var(--radius);
+    padding: 14px 18px;
+    display: none;
+    align-items: center;
+    gap: 12px;
+    margin-top: 14px;
+  }
+  .arquivo-info.show { display: flex; }
+  .arquivo-nome { font-weight: 600; font-size: 14px; flex: 1; }
+  .arquivo-info small { color: var(--gray); font-size: 12px; display: block; }
+
+  /* ALTERAÇÕES */
+  .tipos-alteracao {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin-bottom: 20px;
+  }
+  @media (max-width: 560px) { .tipos-alteracao { grid-template-columns: 1fr; } }
+
+  .tipo-item {
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 12px 14px;
+    cursor: pointer;
+    transition: all .2s;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 13px;
+    font-weight: 500;
+    user-select: none;
+  }
+  .tipo-item:hover { border-color: var(--sigma); background: var(--sigma-light); }
+  .tipo-item.selecionado { border-color: var(--sigma); background: var(--sigma-light); }
+  .tipo-item input[type=checkbox] { accent-color: var(--sigma); width: 16px; height: 16px; flex-shrink: 0; }
+
+  /* CAMPOS DE ALTERAÇÃO */
+  .alteracoes-campos { display: flex; flex-direction: column; gap: 14px; }
+  .campo-alteracao {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 16px;
+    display: none;
+  }
+  .campo-alteracao.show { display: block; }
+  .campo-alteracao label {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--sigma);
+    display: block;
+    margin-bottom: 8px;
+  }
+  .campo-alteracao textarea {
+    width: 100%;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 10px 12px;
+    font-size: 13px;
+    font-family: inherit;
+    resize: vertical;
+    min-height: 70px;
+    transition: border .2s;
+  }
+  .campo-alteracao textarea:focus {
+    outline: none;
+    border-color: var(--sigma);
+  }
+  .campo-alteracao textarea::placeholder { color: #9ca3af; }
+
+  /* BOTÕES */
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 24px;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    border: none;
+    transition: all .2s;
+  }
+  .btn-primary {
+    background: var(--sigma);
+    color: white;
+  }
+  .btn-primary:hover { background: var(--sigma-dark); transform: translateY(-1px); }
+  .btn-primary:disabled { background: #d1d5db; cursor: not-allowed; transform: none; }
+  .btn-secondary {
+    background: white;
+    color: var(--sigma);
+    border: 1px solid var(--sigma);
+  }
+  .btn-secondary:hover { background: var(--sigma-light); }
+  .btn-success {
+    background: var(--success);
+    color: white;
+  }
+  .btn-success:hover { background: #047857; }
+
+  .btn-row {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin-top: 22px;
+  }
+
+  /* LOADING */
+  .loading-card {
+    text-align: center;
+    padding: 50px 20px;
+  }
+  .spinner {
+    width: 52px;
+    height: 52px;
+    border: 4px solid var(--sigma-light);
+    border-top-color: var(--sigma);
+    border-radius: 50%;
+    animation: spin .8s linear infinite;
+    margin: 0 auto 20px;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .loading-card h3 { font-size: 16px; font-weight: 600; margin-bottom: 8px; }
+  .loading-card p { font-size: 13px; color: var(--gray); }
+  .loading-steps { margin-top: 20px; display: flex; flex-direction: column; gap: 8px; }
+  .loading-step {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 13px;
+    color: var(--gray);
+    padding: 10px 14px;
+    background: var(--bg);
+    border-radius: 8px;
+    transition: all .4s;
+  }
+  .loading-step.ativo { color: var(--sigma); background: var(--sigma-light); font-weight: 600; }
+  .loading-step.concluido { color: var(--success); }
+  .loading-step svg { flex-shrink: 0; }
+
+  /* RESULTADO */
+  .resultado-card { text-align: center; padding: 20px 0; }
+  .resultado-icon {
+    width: 70px;
+    height: 70px;
+    background: #d1fae5;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 16px;
+  }
+  .resultado-card h3 { font-size: 20px; font-weight: 700; margin-bottom: 8px; }
+  .resultado-card p { font-size: 14px; color: var(--gray); margin-bottom: 24px; }
+  .resultado-info {
+    background: var(--bg);
+    border-radius: 8px;
+    padding: 16px;
+    text-align: left;
+    margin-bottom: 20px;
+    font-size: 13px;
+  }
+  .resultado-info-item {
+    display: flex;
+    gap: 8px;
+    padding: 6px 0;
+    border-bottom: 1px solid var(--border);
+  }
+  .resultado-info-item:last-child { border: none; }
+  .resultado-info-label { color: var(--gray); width: 140px; flex-shrink: 0; }
+  .resultado-info-valor { font-weight: 600; }
+
+  /* ALERTA */
+  .alert {
+    padding: 12px 16px;
+    border-radius: 8px;
+    font-size: 13px;
+    margin-top: 12px;
+    display: none;
+  }
+  .alert.show { display: flex; align-items: center; gap: 10px; }
+  .alert-error { background: #fee2e2; color: #dc2626; border: 1px solid #fca5a5; }
+  .alert-warning { background: #fef3c7; color: #92400e; border: 1px solid #fcd34d; }
+
+  /* FOOTER */
+  footer {
+    text-align: center;
+    padding: 20px;
+    font-size: 12px;
+    color: var(--gray);
+    border-top: 1px solid var(--border);
+    background: white;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo-sigma">S</div>
+  <div style="flex:1;">
+    <h1>Elaboração de Contrato Social</h1>
+    <p>Sigma Contabilidade — Departamento Societário</p>
+  </div>
+  <a href="/" style="color:rgba(255,255,255,0.75);font-size:13px;text-decoration:none;display:flex;align-items:center;gap:6px;padding:7px 14px;border:1px solid rgba(255,255,255,0.3);border-radius:7px;transition:all .2s;margin-right:8px;" onmouseover="this.style.background='rgba(255,255,255,0.1)'" onmouseout="this.style.background='transparent'">
+    <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg>
+    Dashboard
+  </a>
+  <a href="/logout" style="color:rgba(255,255,255,0.75);font-size:13px;text-decoration:none;display:flex;align-items:center;gap:6px;padding:7px 14px;border:1px solid rgba(255,255,255,0.3);border-radius:7px;transition:all .2s;" onmouseover="this.style.background='rgba(255,255,255,0.1)'" onmouseout="this.style.background='transparent'">
+    <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+    Sair
+  </a>
+</header>
+
+<main>
+
+  <!-- STEPS -->
+  <div class="steps">
+    <div class="step active" id="step-1">
+      <div class="step-num">1</div>
+      <span>Upload do Contrato</span>
+    </div>
+    <div class="step" id="step-2">
+      <div class="step-num">2</div>
+      <span>Informar Alterações</span>
+    </div>
+    <div class="step" id="step-3">
+      <div class="step-num">3</div>
+      <span>Processando</span>
+    </div>
+    <div class="step" id="step-4">
+      <div class="step-num">4</div>
+      <span>Download</span>
+    </div>
+  </div>
+
+  <!-- CARD 1: UPLOAD -->
+  <div class="card active" id="card-1">
+    <h2>
+      <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+        <polyline points="14 2 14 8 20 8"/>
+      </svg>
+      Passo 1 — Contrato Social Anterior
+    </h2>
+    <p class="subtitle">Faça o upload do contrato social atual da empresa (PDF ou Word). O sistema irá ler e extrair o texto automaticamente.</p>
+
+    <div class="upload-area" id="upload-area">
+      <input type="file" id="arquivo-input" accept=".pdf,.docx" />
+      <div class="upload-icon">
+        <svg width="24" height="24" fill="none" stroke="#A72C31" stroke-width="2" viewBox="0 0 24 24">
+          <polyline points="16 16 12 12 8 16"/>
+          <line x1="12" y1="12" x2="12" y2="21"/>
+          <path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3"/>
+        </svg>
+      </div>
+      <h3>Arraste o arquivo aqui ou clique para selecionar</h3>
+      <p>Selecione o contrato social anterior da empresa</p>
+      <div class="formatos">
+        <span class="badge badge-pdf">PDF</span>
+        <span class="badge badge-docx">DOCX</span>
+      </div>
+    </div>
+
+    <div class="arquivo-info" id="arquivo-info">
+      <svg width="20" height="20" fill="none" stroke="#A72C31" stroke-width="2" viewBox="0 0 24 24">
+        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+      </svg>
+      <div>
+        <div class="arquivo-nome" id="arquivo-nome"></div>
+        <small id="arquivo-status"></small>
+      </div>
+      <span class="badge badge-ok" id="arquivo-badge"></span>
+    </div>
+
+    <div class="alert alert-error" id="erro-upload">
+      <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+        <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+      </svg>
+      <span id="erro-upload-msg"></span>
+    </div>
+
+    <div class="btn-row">
+      <button class="btn btn-primary" id="btn-proximo-1" disabled onclick="irPasso2()">
+        Continuar
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+          <polyline points="9 18 15 12 9 6"/>
+        </svg>
+      </button>
+    </div>
+  </div>
+
+  <!-- CARD 2: ALTERAÇÕES -->
+  <div class="card" id="card-2">
+    <h2>
+      <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+        <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+        <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+      </svg>
+      Passo 2 — Quais alterações serão realizadas?
+    </h2>
+    <p class="subtitle">Selecione os tipos de alteração e descreva as mudanças. Seja detalhado para que o robô gere o documento correto.</p>
+
+    <div class="tipos-alteracao">
+      <label class="tipo-item">
+        <input type="checkbox" id="check-forma-atuacao" onchange="toggleAlteracao('forma-atuacao')" />
+        <span>Alteração da forma de atuação</span>
+      </label>
+      <label class="tipo-item">
+        <input type="checkbox" id="check-natureza-juridica" onchange="toggleAlteracao('natureza-juridica')" />
+        <span>Alteração da natureza jurídica</span>
+      </label>
+      <label class="tipo-item">
+        <input type="checkbox" id="check-area" onchange="toggleAlteracao('area')" />
+        <span>Alteração de área</span>
+      </label>
+      <label class="tipo-item">
+        <input type="checkbox" id="check-atividades" onchange="toggleAlteracao('atividades')" />
+        <span>Alteração de atividades econômicas (principal e secundárias)</span>
+      </label>
+      <label class="tipo-item">
+        <input type="checkbox" id="check-capital-quadro" onchange="toggleAlteracao('capital-quadro')" />
+        <span>Alteração de capital social e/ou Quadro Societário</span>
+      </label>
+      <label class="tipo-item">
+        <input type="checkbox" id="check-clausulas-particulares" onchange="toggleAlteracao('clausulas-particulares')" />
+        <span>Alteração de Cláusulas Particulares</span>
+      </label>
+      <label class="tipo-item">
+        <input type="checkbox" id="check-dados-cadastrais" onchange="toggleAlteracao('dados-cadastrais')" />
+        <span>Alteração de dados cadastrais</span>
+      </label>
+      <label class="tipo-item">
+        <input type="checkbox" id="check-endereco-estados" onchange="toggleAlteracao('endereco-estados')" />
+        <span>Alteração de endereço entre estados</span>
+      </label>
+      <label class="tipo-item">
+        <input type="checkbox" id="check-endereco-municipios" onchange="toggleAlteracao('endereco-municipios')" />
+        <span>Alteração de endereço entre municípios no mesmo estado</span>
+      </label>
+      <label class="tipo-item">
+        <input type="checkbox" id="check-endereco-municipio" onchange="toggleAlteracao('endereco-municipio')" />
+        <span>Alteração de endereço no mesmo município</span>
+      </label>
+      <label class="tipo-item">
+        <input type="checkbox" id="check-exercicio-atividades" onchange="toggleAlteracao('exercicio-atividades')" />
+        <span>Alteração de exercício das atividades econômicas</span>
+      </label>
+      <label class="tipo-item">
+        <input type="checkbox" id="check-nome-empresarial" onchange="toggleAlteracao('nome-empresarial')" />
+        <span>Alteração de nome empresarial (firma ou denominação)</span>
+      </label>
+      <label class="tipo-item">
+        <input type="checkbox" id="check-nome-fantasia" onchange="toggleAlteracao('nome-fantasia')" />
+        <span>Alteração de nome fantasia</span>
+      </label>
+      <label class="tipo-item">
+        <input type="checkbox" id="check-tipo-unidade" onchange="toggleAlteracao('tipo-unidade')" />
+        <span>Alteração do tipo de unidade</span>
+      </label>
+      <label class="tipo-item">
+        <input type="checkbox" id="check-cisao-parcial" onchange="toggleAlteracao('cisao-parcial')" />
+        <span>Cisão parcial (específico para a sucedida)</span>
+      </label>
+      <label class="tipo-item">
+        <input type="checkbox" id="check-consolidacao" onchange="toggleAlteracao('consolidacao')" />
+        <span>Consolidação</span>
+      </label>
+      <label class="tipo-item">
+        <input type="checkbox" id="check-desdobramento" onchange="toggleAlteracao('desdobramento')" />
+        <span>Desdobramento de atividades econômicas (principal e secundárias)</span>
+      </label>
+      <label class="tipo-item">
+        <input type="checkbox" id="check-desistencia-conversao" onchange="toggleAlteracao('desistencia-conversao')" />
+        <span>Desistência de Conversão em Sociedade Civil/Simples</span>
+      </label>
+      <label class="tipo-item">
+        <input type="checkbox" id="check-desistencia-transferencia" onchange="toggleAlteracao('desistencia-transferencia')" />
+        <span>Desistência de Transferência de Matriz</span>
+      </label>
+      <label class="tipo-item">
+        <input type="checkbox" id="check-emancipacao" onchange="toggleAlteracao('emancipacao')" />
+        <span>Emancipação</span>
+      </label>
+      <label class="tipo-item">
+        <input type="checkbox" id="check-enquadramento" onchange="toggleAlteracao('enquadramento')" />
+        <span>Enquadramento / Reenquadramento / Desenquadramento de Porte de Empresa</span>
+      </label>
+      <label class="tipo-item">
+        <input type="checkbox" id="check-espolio" onchange="toggleAlteracao('espolio')" />
+        <span>Espólio</span>
+      </label>
+      <label class="tipo-item">
+        <input type="checkbox" id="check-incorporacao" onchange="toggleAlteracao('incorporacao')" />
+        <span>Incorporação de empresa</span>
+      </label>
+      <label class="tipo-item">
+        <input type="checkbox" id="check-procuracao" onchange="toggleAlteracao('procuracao')" />
+        <span>Procuração</span>
+      </label>
+      <label class="tipo-item">
+        <input type="checkbox" id="check-prorrogacao-prazo" onchange="toggleAlteracao('prorrogacao-prazo')" />
+        <span>Prorrogação de prazo (SPE)</span>
+      </label>
+      <label class="tipo-item">
+        <input type="checkbox" id="check-rerratificacao" onchange="toggleAlteracao('rerratificacao')" />
+        <span>Rerratificação</span>
+      </label>
+      <label class="tipo-item">
+        <input type="checkbox" id="check-restabelecimento" onchange="toggleAlteracao('restabelecimento')" />
+        <span>Restabelecimento de matriz (Reativação)</span>
+      </label>
+      <label class="tipo-item">
+        <input type="checkbox" id="check-revogacao-procuracao" onchange="toggleAlteracao('revogacao-procuracao')" />
+        <span>Revogação de Procuração</span>
+      </label>
+      <label class="tipo-item">
+        <input type="checkbox" id="check-sucessao" onchange="toggleAlteracao('sucessao')" />
+        <span>Sucessão</span>
+      </label>
+      <label class="tipo-item">
+        <input type="checkbox" id="check-cancelamento-gerencia" onchange="toggleAlteracao('cancelamento-gerencia')" />
+        <span>Cancelamento de delegação de gerência</span>
+      </label>
+      <label class="tipo-item">
+        <input type="checkbox" id="check-delegacao-gerencia" onchange="toggleAlteracao('delegacao-gerencia')" />
+        <span>Delegação de gerência</span>
+      </label>
+      <label class="tipo-item" id="label-eleicao-foro">
+        <input type="checkbox" id="check-eleicao-foro" onchange="toggleAlteracao('eleicao-foro')" />
+        <span>Eleição de Foro <span id="badge-foro-auto" style="display:none;font-size:11px;background:#fef9c3;color:#854d0e;border:1px solid #fde047;border-radius:4px;padding:1px 7px;margin-left:4px;font-weight:600;">automático</span></span>
+      </label>
+    </div>
+
+    <div class="alteracoes-campos">
+
+      <div class="campo-alteracao" id="campo-forma-atuacao">
+        <label>Alteração da forma de atuação — descreva:</label>
+        <textarea id="desc-forma-atuacao" placeholder="Ex: A empresa passa a atuar de forma presencial e online (e-commerce). Incluir nova forma de atuação no contrato social."></textarea>
+      </div>
+
+      <div class="campo-alteracao" id="campo-natureza-juridica">
+        <label>Alteração da natureza jurídica — descreva:</label>
+        <textarea id="desc-natureza-juridica" placeholder="Ex: A empresa se transforma de Empresário Individual para Sociedade Limitada (LTDA), com ingresso do sócio [nome completo, CPF, qualificação...]."></textarea>
+      </div>
+
+      <div class="campo-alteracao" id="campo-area">
+        <label>Alteração de área — descreva:</label>
+        <textarea id="desc-area" placeholder="Ex: A área de atuação da empresa passa de [área atual] para [nova área]. Descreva a mudança e o fundamento."></textarea>
+      </div>
+
+      <div class="campo-alteracao" id="campo-atividades">
+        <label>Alteração de atividades econômicas — informe os CNAEs novos e os que serão excluídos:</label>
+        <textarea id="desc-atividades" placeholder="Ex: Incluir CNAE principal: 6201-5/01 — Desenvolvimento de programas de computador sob encomenda. Excluir CNAE secundário: 4751-2/01. Manter demais atividades."></textarea>
+      </div>
+
+      <div class="campo-alteracao" id="campo-capital-quadro">
+        <label>Alteração de capital social e/ou Quadro Societário — descreva:</label>
+        <textarea id="desc-capital-quadro" placeholder="Ex: Admissão da sócia Maria Souza (CPF 000.000.000-00, RG..., residente em...), que integralizará R$ 20.000,00 em quotas. Capital total passa de R$ 30.000,00 para R$ 50.000,00. Distribuição: Fulano — 30.000 quotas / Maria — 20.000 quotas."></textarea>
+      </div>
+
+      <div class="campo-alteracao" id="campo-clausulas-particulares">
+        <label>Alteração de Cláusulas Particulares — descreva as cláusulas a alterar:</label>
+        <textarea id="desc-clausulas-particulares" placeholder="Ex: Alterar a Cláusula Quinta do contrato, que passa a ter a seguinte redação: '...'. As demais cláusulas permanecem inalteradas."></textarea>
+      </div>
+
+      <div class="campo-alteracao" id="campo-dados-cadastrais">
+        <label>Alteração de dados cadastrais — informe os dados a corrigir/atualizar:</label>
+        <textarea id="desc-dados-cadastrais" placeholder="Ex: Corrigir o nome da sócia, que passou a constar como Maria da Silva Souza após casamento. CPF permanece o mesmo: 000.000.000-00."></textarea>
+      </div>
+
+      <div class="campo-alteracao" id="campo-endereco-estados">
+        <label>Alteração de endereço entre estados — informe o novo endereço:</label>
+        <textarea id="desc-endereco-estados" placeholder="Ex: A sede da empresa é transferida do estado de São Paulo para o estado de Goiás. Novo endereço: Rua das Flores, nº 100, Bairro Setor Central, Goiânia - GO, CEP 74.000-000."></textarea>
+      </div>
+
+      <div class="campo-alteracao" id="campo-endereco-municipios">
+        <label>Alteração de endereço entre municípios no mesmo estado — informe o novo endereço:</label>
+        <textarea id="desc-endereco-municipios" placeholder="Ex: A sede é transferida de Anápolis/GO para Goiânia/GO. Novo endereço: Av. Anhanguera, nº 500, Sala 10, Setor Central, Goiânia - GO, CEP 74.000-000."></textarea>
+      </div>
+
+      <div class="campo-alteracao" id="campo-endereco-municipio">
+        <label>Alteração de endereço no mesmo município — informe o novo endereço completo:</label>
+        <textarea id="desc-endereco-municipio" placeholder="Ex: Rua das Rosas, nº 250, Sala 05, Bairro Setor Bueno, Goiânia - GO, CEP 74.230-030."></textarea>
+      </div>
+
+      <div class="campo-alteracao" id="campo-exercicio-atividades">
+        <label>Alteração de exercício das atividades econômicas — descreva:</label>
+        <textarea id="desc-exercicio-atividades" placeholder="Ex: A empresa passa a exercer suas atividades também no período noturno, de segunda a sábado, das 18h às 23h."></textarea>
+      </div>
+
+      <div class="campo-alteracao" id="campo-nome-empresarial">
+        <label>Alteração de nome empresarial — informe o nome atual e o novo nome:</label>
+        <textarea id="desc-nome-empresarial" placeholder="Ex: O nome empresarial passa de 'EMPRESA ANTIGA LTDA' para 'NOVA EMPRESA COMÉRCIO E SERVIÇOS LTDA'. CNPJ, NIRE e demais dados permanecem inalterados."></textarea>
+      </div>
+
+      <div class="campo-alteracao" id="campo-nome-fantasia">
+        <label>Alteração de nome fantasia — informe o nome fantasia atual e o novo:</label>
+        <textarea id="desc-nome-fantasia" placeholder="Ex: O nome fantasia passa de 'NOME ATUAL' para 'NOVO NOME'. O nome empresarial (razão social) permanece inalterado."></textarea>
+      </div>
+
+      <div class="campo-alteracao" id="campo-tipo-unidade">
+        <label>Alteração do tipo de unidade — descreva:</label>
+        <textarea id="desc-tipo-unidade" placeholder="Ex: A unidade passa de filial para matriz. Novo endereço da matriz: [endereço completo]."></textarea>
+      </div>
+
+      <div class="campo-alteracao" id="campo-cisao-parcial">
+        <label>Cisão parcial — descreva o patrimônio transferido e a empresa sucessora:</label>
+        <textarea id="desc-cisao-parcial" placeholder="Ex: Cisão parcial com transferência de 40% do patrimônio líquido para a empresa NOVA EMPRESA LTDA, CNPJ 00.000.000/0001-00, constituída para este fim. A empresa sucedida continua com 60% do patrimônio."></textarea>
+      </div>
+
+      <div class="campo-alteracao" id="campo-consolidacao">
+        <label>Consolidação</label>
+        <div style="background:#f0fdf4;border:1px solid #86efac;border-radius:6px;padding:12px 14px;font-size:13px;color:#166534;display:flex;align-items:center;gap:8px;">
+          <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
+          O sistema irá consolidar o contrato social ao final do instrumento de alteração. Nenhuma descrição adicional é necessária.
+        </div>
+      </div>
+
+      <div class="campo-alteracao" id="campo-desdobramento">
+        <label>Desdobramento de atividades econômicas — descreva:</label>
+        <textarea id="desc-desdobramento" placeholder="Ex: Desdobramento da atividade principal CNAE 4711-3/02 em duas atividades secundárias: CNAE 4711-3/01 e CNAE 4712-1/00. A atividade principal passa a ser CNAE 4719-9/99."></textarea>
+      </div>
+
+      <div class="campo-alteracao" id="campo-desistencia-conversao">
+        <label>Desistência de Conversão em Sociedade Civil/Simples — descreva:</label>
+        <textarea id="desc-desistencia-conversao" placeholder="Ex: Os sócios desistem do pedido de conversão em Sociedade Simples protocolado sob nº [protocolo]. A empresa permanece como Sociedade Empresária Limitada."></textarea>
+      </div>
+
+      <div class="campo-alteracao" id="campo-desistencia-transferencia">
+        <label>Desistência de Transferência de Matriz — descreva:</label>
+        <textarea id="desc-desistencia-transferencia" placeholder="Ex: Os sócios desistem do pedido de transferência de matriz para o estado de [UF], protocolado sob nº [protocolo]. A sede permanece em [endereço atual]."></textarea>
+      </div>
+
+      <div class="campo-alteracao" id="campo-emancipacao">
+        <label>Emancipação — informe os dados do emancipado:</label>
+        <textarea id="desc-emancipacao" placeholder="Ex: O sócio [nome], nascido em [data], portador do CPF [número], foi emancipado por [instrumento/sentença] em [data], passando a ter plena capacidade civil para os atos da vida empresarial."></textarea>
+      </div>
+
+      <div class="campo-alteracao" id="campo-enquadramento">
+        <label>Enquadramento / Reenquadramento / Desenquadramento de Porte — descreva:</label>
+        <textarea id="desc-enquadramento" placeholder="Ex: A empresa passa a ser enquadrada como Empresa de Pequeno Porte (EPP), com faturamento anual previsto entre R$ 360.000,01 e R$ 4.800.000,00, conforme LC 123/2006."></textarea>
+      </div>
+
+      <div class="campo-alteracao" id="campo-espolio">
+        <label>Espólio — informe o sócio falecido e os herdeiros:</label>
+        <textarea id="desc-espolio" placeholder="Ex: Em decorrência do falecimento do sócio [nome, CPF], ocorrido em [data], o espólio passa a ser representado pelo inventariante [nome, CPF, qualificação]. As quotas do de cujus (X quotas) ficam sob inventário."></textarea>
+      </div>
+
+      <div class="campo-alteracao" id="campo-incorporacao">
+        <label>Incorporação de empresa — descreva a incorporada e o patrimônio absorvido:</label>
+        <textarea id="desc-incorporacao" placeholder="Ex: A empresa INCORPORADA LTDA, CNPJ 00.000.000/0001-00, é incorporada pela presente sociedade, que absorve seu patrimônio líquido avaliado em R$ [valor], com a consequente extinção da incorporada."></textarea>
+      </div>
+
+      <div class="campo-alteracao" id="campo-procuracao">
+        <label>Procuração — informe o outorgante, outorgado e poderes conferidos:</label>
+        <textarea id="desc-procuracao" placeholder="Ex: O sócio administrador [nome, CPF] confere procuração ao Sr. [nome, CPF, qualificação] para representar a empresa perante [órgão/finalidade], com poderes para [atos específicos], pelo prazo de [período]."></textarea>
+      </div>
+
+      <div class="campo-alteracao" id="campo-prorrogacao-prazo">
+        <label>Prorrogação de prazo (SPE) — informe o novo prazo:</label>
+        <textarea id="desc-prorrogacao-prazo" placeholder="Ex: O prazo de duração da Sociedade de Propósito Específico, que se encerrava em [data], é prorrogado por mais [período], passando a encerrar-se em [nova data]."></textarea>
+      </div>
+
+      <div class="campo-alteracao" id="campo-rerratificacao">
+        <div class="alert alert-warning show" style="margin-top:0;margin-bottom:12px;">
+          <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" style="flex-shrink:0;">
+            <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+            <line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
+          </svg>
+          <span>Este evento geralmente acompanha a alteração que está sendo corrigida. Exemplo: ao corrigir um erro de nome empresarial, selecione também o evento <strong>Alteração de denominação social</strong>.</span>
+        </div>
+        <label>Rerratificação — informe o erro a corrigir e a redação correta:</label>
+        <textarea id="desc-rerratificacao" placeholder="Ex: Rerratificação da [Xª] alteração contratual registrada em [data] para corrigir [erro específico]. A redação correta da Cláusula [X] é: '...'."></textarea>
+      </div>
+
+      <div class="campo-alteracao" id="campo-restabelecimento">
+        <label>Restabelecimento de matriz (Reativação) — descreva:</label>
+        <textarea id="desc-restabelecimento" placeholder="Ex: A empresa, anteriormente baixada/paralisada em [data], é reativada para retomar suas atividades a partir de [data]. O endereço da sede volta a ser [endereço]."></textarea>
+      </div>
+
+      <div class="campo-alteracao" id="campo-revogacao-procuracao">
+        <label>Revogação de Procuração — informe a procuração a revogar:</label>
+        <textarea id="desc-revogacao-procuracao" placeholder="Ex: O sócio administrador [nome] revoga a procuração outorgada em [data] ao Sr. [nome, CPF], que conferia poderes para [atos]. A revogação tem efeito imediato."></textarea>
+      </div>
+
+      <div class="campo-alteracao" id="campo-sucessao">
+        <label>Sucessão — informe o sucedido e o(s) sucessor(es):</label>
+        <textarea id="desc-sucessao" placeholder="Ex: Em decorrência de [fusão/incorporação/morte], a empresa [nome] sucede a empresa [nome anterior] em todos os direitos e obrigações, assumindo integralmente seu patrimônio, contratos e registros."></textarea>
+      </div>
+
+      <div class="campo-alteracao" id="campo-cancelamento-gerencia">
+        <label>Cancelamento de delegação de gerência — descreva:</label>
+        <textarea id="desc-cancelamento-gerencia" placeholder="Ex: Fica cancelada a delegação de gerência conferida ao Sr. [nome, CPF] em [data], por meio de [instrumento]. O cancelamento tem efeito imediato, retornando todos os poderes ao sócio administrador [nome]."></textarea>
+      </div>
+
+      <div class="campo-alteracao" id="campo-delegacao-gerencia">
+        <label>Delegação de gerência — informe o delegante, o delegado e os poderes:</label>
+        <textarea id="desc-delegacao-gerencia" placeholder="Ex: O sócio administrador [nome, CPF] delega ao Sr. [nome, CPF, qualificação completa] poderes de gerência para [atos específicos], pelo prazo de [período], sem exclusão dos poderes do administrador delegante."></textarea>
+      </div>
+
+      <div class="campo-alteracao" id="campo-eleicao-foro">
+        <label>Eleição de Foro — informe o foro eleito:</label>
+        <div style="background:#fffbeb;border:1px solid #fde047;border-radius:6px;padding:10px 14px;font-size:12px;color:#78350f;margin-bottom:10px;display:flex;align-items:flex-start;gap:8px;">
+          <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" style="flex-shrink:0;margin-top:1px"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+          Via de regra, o foro eleito é o mesmo município onde está a sede da empresa após a alteração.
+        </div>
+        <textarea id="desc-eleicao-foro" placeholder="Ex: Fica eleito o foro da Comarca de Goiânia, Estado de Goiás, para dirimir quaisquer controvérsias decorrentes deste contrato, com renúncia expressa a qualquer outro, por mais privilegiado que seja."></textarea>
+      </div>
+
+    </div>
+
+    <div class="alert alert-warning" id="aviso-alteracoes">
+      <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+        <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+        <line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
+      </svg>
+      Selecione ao menos um tipo de alteração e preencha a descrição.
+    </div>
+
+    <div class="btn-row">
+      <button class="btn btn-secondary" onclick="irPasso1()">
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+          <polyline points="15 18 9 12 15 6"/>
+        </svg>
+        Voltar
+      </button>
+      <button class="btn btn-primary" id="btn-gerar" onclick="gerarDocumento()">
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+          <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>
+        </svg>
+        Gerar Documento
+      </button>
+    </div>
+  </div>
+
+  <!-- CARD 3: LOADING -->
+  <div class="card" id="card-3">
+    <div class="loading-card">
+      <div class="spinner"></div>
+      <h3>Gerando Instrumento de Alteração Contratual...</h3>
+      <p>A IA está elaborando o documento. Isso pode levar alguns minutos.</p>
+      <div class="loading-steps">
+        <div class="loading-step ativo" id="ls-1">
+          <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+          </svg>
+          Lendo contrato anterior...
+        </div>
+        <div class="loading-step" id="ls-2">
+          <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/>
+          </svg>
+          Analisando cláusulas e artigos...
+        </div>
+        <div class="loading-step" id="ls-3">
+          <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+            <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+          </svg>
+          Elaborando cláusulas de alteração...
+        </div>
+        <div class="loading-step" id="ls-4">
+          <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+            <polyline points="14 2 14 8 20 8"/>
+            <line x1="16" y1="13" x2="8" y2="13"/>
+          </svg>
+          Gerando contrato consolidado...
+        </div>
+        <div class="loading-step" id="ls-5">
+          <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <polyline points="20 6 9 17 4 12"/>
+          </svg>
+          Formatando documento Word...
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- CARD 4: RESULTADO -->
+  <div class="card" id="card-4">
+    <div class="resultado-card">
+      <div class="resultado-icon">
+        <svg width="32" height="32" fill="none" stroke="#059669" stroke-width="2" viewBox="0 0 24 24">
+          <polyline points="20 6 9 17 4 12"/>
+        </svg>
+      </div>
+      <h3>Documento Gerado com Sucesso!</h3>
+      <p>O instrumento de alteração contratual está pronto para download.</p>
+
+      <div class="resultado-info">
+        <div class="resultado-info-item">
+          <span class="resultado-info-label">Empresa:</span>
+          <span class="resultado-info-valor" id="res-empresa">—</span>
+        </div>
+        <div class="resultado-info-item">
+          <span class="resultado-info-label">Alterações:</span>
+          <span class="resultado-info-valor" id="res-alteracoes">—</span>
+        </div>
+        <div class="resultado-info-item">
+          <span class="resultado-info-label">Conteúdo:</span>
+          <span class="resultado-info-valor" id="res-conteudo">Instrumento de Alteração</span>
+        </div>
+        <div class="resultado-info-item">
+          <span class="resultado-info-label">Formato:</span>
+          <span class="resultado-info-valor">Word (.docx) — pronto para revisão e assinatura</span>
+        </div>
+      </div>
+
+      <p style="font-size:13px;color:#92400e;background:#fef3c7;border:1px solid #fcd34d;border-radius:8px;padding:12px;margin-bottom:20px;">
+        <strong>Importante:</strong> Revise o documento gerado antes de usar. Verifique nomes, CPFs, valores e datas. O documento pode precisar de ajustes conforme especificidades do caso.
+      </p>
+
+      <div class="btn-row" style="justify-content:center;flex-wrap:wrap;">
+        <button class="btn btn-success" id="btn-download-docx" onclick="baixarDocumento('docx')">
+          <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+            <polyline points="14 2 14 8 20 8"/>
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+            <polyline points="7 10 12 15 17 10"/>
+          </svg>
+          Baixar Word (.docx)
+        </button>
+        <button class="btn" id="btn-download-pdf" onclick="baixarDocumento('pdf')" style="background:#dc2626;color:white;">
+          <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+            <polyline points="14 2 14 8 20 8"/>
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+            <polyline points="7 10 12 15 17 10"/>
+          </svg>
+          Baixar PDF
+        </button>
+        <button class="btn btn-secondary" onclick="novoDocumento()">
+          <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <polyline points="1 4 1 10 7 10"/>
+            <path d="M3.51 15a9 9 0 1 0 .49-3.49"/>
+          </svg>
+          Gerar Novo
+        </button>
+      </div>
+    </div>
+  </div>
+
+</main>
+
+<footer>
+  Sigma Contabilidade — Departamento Societário &nbsp;|&nbsp; Uso interno
+</footer>
+
+<script>
+  // Estado global
+  let textoContrato = '';
+  let nomeEmpresa = '';
+  let tokenDownload = '';   // token do cache servidor
+  let nomeArquivoDownload = '';
+
+  const tiposMap = {
+    'forma-atuacao':          'Alteração da forma de atuação',
+    'natureza-juridica':      'Alteração da natureza jurídica',
+    'area':                   'Alteração de área',
+    'atividades':             'Alteração de atividades econômicas (principal e secundárias)',
+    'capital-quadro':         'Alteração de capital social e/ou Quadro Societário',
+    'clausulas-particulares': 'Alteração de Cláusulas Particulares',
+    'dados-cadastrais':       'Alteração de dados cadastrais',
+    'endereco-estados':       'Alteração de endereço entre estados',
+    'endereco-municipios':    'Alteração de endereço entre municípios no mesmo estado',
+    'endereco-municipio':     'Alteração de endereço no mesmo município',
+    'exercicio-atividades':   'Alteração de exercício das atividades econômicas',
+    'nome-empresarial':       'Alteração de nome empresarial (firma ou denominação)',
+    'nome-fantasia':          'Alteração de nome fantasia',
+    'tipo-unidade':           'Alteração do tipo de unidade',
+    'cisao-parcial':          'Cisão parcial (específico para a sucedida)',
+    'consolidacao':           'Consolidação',
+    'desdobramento':          'Desdobramento de atividades econômicas (principal e secundárias)',
+    'desistencia-conversao':  'Desistência de Conversão em Sociedade Civil/Simples',
+    'desistencia-transferencia': 'Desistência de Transferência de Matriz',
+    'emancipacao':            'Emancipação',
+    'enquadramento':          'Enquadramento/Reenquadramento/Desenquadramento de Porte de Empresa',
+    'espolio':                'Espólio',
+    'incorporacao':           'Incorporação de empresa',
+    'procuracao':             'Procuração',
+    'prorrogacao-prazo':      'Prorrogação de prazo (SPE)',
+    'rerratificacao':         'Rerratificação',
+    'restabelecimento':       'Restabelecimento de matriz (Reativação)',
+    'revogacao-procuracao':   'Revogação de Procuração',
+    'sucessao':               'Sucessão',
+    'cancelamento-gerencia':  'Cancelamento de delegação de gerência',
+    'delegacao-gerencia':     'Delegação de gerência',
+    'eleicao-foro':           'Eleição de Foro'
+  };
+
+  // Estado das alterações selecionadas (independente do DOM)
+  const tiposSelecionados = new Set();
+
+  // Upload
+  const inputArquivo = document.getElementById('arquivo-input');
+  const uploadArea = document.getElementById('upload-area');
+
+  uploadArea.addEventListener('dragover', e => { e.preventDefault(); uploadArea.classList.add('drag-over'); });
+  uploadArea.addEventListener('dragleave', () => uploadArea.classList.remove('drag-over'));
+  uploadArea.addEventListener('drop', e => {
+    e.preventDefault();
+    uploadArea.classList.remove('drag-over');
+    if (e.dataTransfer.files[0]) processarArquivo(e.dataTransfer.files[0]);
+  });
+  inputArquivo.addEventListener('change', () => {
+    if (inputArquivo.files[0]) processarArquivo(inputArquivo.files[0]);
+  });
+
+  function processarArquivo(arquivo) {
+    const ext = arquivo.name.split('.').pop().toLowerCase();
+    if (!['pdf', 'docx'].includes(ext)) {
+      mostrarErro('erro-upload', 'erro-upload-msg', 'Formato inválido. Use apenas PDF ou DOCX.');
+      return;
+    }
+
+    document.getElementById('arquivo-nome').textContent = arquivo.name;
+    document.getElementById('arquivo-status').textContent = 'Enviando e lendo...';
+    document.getElementById('arquivo-badge').textContent = '...';
+    document.getElementById('arquivo-info').classList.add('show');
+    document.getElementById('erro-upload').classList.remove('show');
+    document.getElementById('btn-proximo-1').disabled = true;
+
+    const formData = new FormData();
+    formData.append('contrato', arquivo);
+
+    fetch('/upload', { method: 'POST', body: formData })
+      .then(r => {
+        if (!r.ok && r.status !== 400) {
+          return r.text().then(txt => { throw new Error(txt || `Erro HTTP ${r.status}`); });
+        }
+        return r.json();
+      })
+      .then(data => {
+        if (data.erro) {
+          mostrarErro('erro-upload', 'erro-upload-msg', data.erro);
+          document.getElementById('arquivo-info').classList.remove('show');
+          return;
+        }
+        textoContrato = data.texto;
+        nomeEmpresa = data.nome_empresa;
+        const chars = (data.tamanho || 0).toLocaleString('pt-BR');
+        document.getElementById('arquivo-status').textContent = `Lido com sucesso — ${chars} caracteres extraídos`;
+        document.getElementById('arquivo-badge').textContent = 'OK';
+        document.getElementById('btn-proximo-1').disabled = false;
+      })
+      .catch(err => {
+        const msg = (err && err.message && !err.message.startsWith('<!'))
+          ? err.message
+          : 'Erro ao processar o arquivo. Verifique o formato e tente novamente.';
+        mostrarErro('erro-upload', 'erro-upload-msg', msg);
+        document.getElementById('arquivo-info').classList.remove('show');
+      });
+  }
+
+  // Controla se a eleição de foro foi ativada automaticamente
+  let foroAutoAtivado = false;
+
+  function _aplicarToggle(tipo, marcar) {
+    const check = document.getElementById(`check-${tipo}`);
+    const campo = document.getElementById(`campo-${tipo}`);
+    const label = check ? check.closest('.tipo-item') : null;
+    if (marcar) {
+      if (check) check.checked = true;
+      if (campo) campo.classList.add('show');
+      if (label) label.classList.add('selecionado');
+      tiposSelecionados.add(tipo);
+    } else {
+      if (check) check.checked = false;
+      if (campo) campo.classList.remove('show');
+      if (label) label.classList.remove('selecionado');
+      tiposSelecionados.delete(tipo);
+    }
+  }
+
+  function _atualizarForoAuto() {
+    const mudancaInterestadual = document.getElementById('check-endereco-estados')?.checked;
+    const mudancaIntermunicipal = document.getElementById('check-endereco-municipios')?.checked;
+    const checkForo = document.getElementById('check-eleicao-foro');
+    const badge = document.getElementById('badge-foro-auto');
+
+    if (mudancaInterestadual || mudancaIntermunicipal) {
+      if (!checkForo.checked) {
+        _aplicarToggle('eleicao-foro', true);
+        foroAutoAtivado = true;
+      }
+      if (badge) badge.style.display = 'inline';
+    } else {
+      if (badge) badge.style.display = 'none';
+      // Só remove automaticamente se o usuário não marcou manualmente
+      if (foroAutoAtivado && checkForo.checked) {
+        _aplicarToggle('eleicao-foro', false);
+        foroAutoAtivado = false;
+      }
+    }
+  }
+
+  function toggleAlteracao(tipo) {
+    const check = document.getElementById(`check-${tipo}`);
+    const campo = document.getElementById(`campo-${tipo}`);
+    const label = check.closest('.tipo-item');
+    if (check.checked) {
+      tiposSelecionados.add(tipo);
+      campo.classList.add('show');
+      if (label) label.classList.add('selecionado');
+    } else {
+      tiposSelecionados.delete(tipo);
+      campo.classList.remove('show');
+      if (label) label.classList.remove('selecionado');
+    }
+
+    // Se o usuário marcou/desmarcou o foro manualmente, anula o controle automático
+    if (tipo === 'eleicao-foro') {
+      foroAutoAtivado = false;
+    }
+
+    // Disparar lógica de auto-seleção quando os eventos gatilho mudarem
+    if (tipo === 'endereco-estados' || tipo === 'endereco-municipios') {
+      _atualizarForoAuto();
+    }
+  }
+
+  function mostrarErro(alertId, msgId, msg) {
+    document.getElementById(alertId).classList.add('show');
+    document.getElementById(msgId).textContent = msg;
+  }
+
+  function irPasso2() {
+    setStep(2);
+    document.getElementById('card-1').classList.remove('active');
+    document.getElementById('card-2').classList.add('active');
+  }
+
+  function irPasso1() {
+    setStep(1);
+    document.getElementById('card-2').classList.remove('active');
+    document.getElementById('card-1').classList.add('active');
+  }
+
+  function setStep(n) {
+    for (let i = 1; i <= 4; i++) {
+      const s = document.getElementById(`step-${i}`);
+      s.classList.remove('active', 'done');
+      if (i < n) s.classList.add('done');
+      else if (i === n) s.classList.add('active');
+    }
+  }
+
+  async function gerarDocumento() {
+    // Coletar alterações do estado JS (não do DOM)
+    const alteracoes = [];
+    for (const tipo of tiposSelecionados) {
+      if (tipo === 'consolidacao') {
+        // Consolidação não tem campo de texto — o sistema trata automaticamente
+        alteracoes.push({ tipo: tiposMap[tipo], descricao: '' });
+      } else {
+        const desc = document.getElementById(`desc-${tipo}`);
+        const descricao = desc ? desc.value.trim() : '';
+        alteracoes.push({ tipo: tiposMap[tipo], descricao: descricao || '(sem descrição adicional)' });
+      }
+    }
+
+    if (alteracoes.length === 0) {
+      document.getElementById('aviso-alteracoes').classList.add('show');
+      return;
+    }
+    document.getElementById('aviso-alteracoes').classList.remove('show');
+
+    // Ir para loading
+    setStep(3);
+    document.getElementById('card-2').classList.remove('active');
+    document.getElementById('card-3').classList.add('active');
+
+    // Animar loading steps
+    animarLoading();
+
+    try {
+      const resp = await fetch('/gerar', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          texto_contrato: textoContrato,
+          alteracoes: alteracoes,
+          nome_empresa: nomeEmpresa
+        })
+      });
+
+      if (!resp.ok) {
+        const err = await resp.json();
+        throw new Error(err.erro || 'Erro desconhecido');
+      }
+
+      const data = await resp.json();
+      tokenDownload = data.token;
+      nomeArquivoDownload = data.nome;
+
+      // Mostrar/ocultar botão PDF conforme disponibilidade
+      const btnPdf = document.getElementById('btn-download-pdf');
+      if (data.pdf_ok === false) {
+        btnPdf.style.display = 'none';
+      } else {
+        btnPdf.style.display = '';
+      }
+
+      // Mostrar resultado
+      setStep(4);
+      document.getElementById('card-3').classList.remove('active');
+      document.getElementById('card-4').classList.add('active');
+      document.getElementById('res-empresa').textContent = nomeEmpresa;
+      document.getElementById('res-alteracoes').textContent = alteracoes.map(a => a.tipo).join(', ');
+      const temConsolidacao = tiposSelecionados.has('consolidacao');
+      document.getElementById('res-conteudo').textContent = temConsolidacao
+        ? 'Instrumento de Alteração + Consolidação do Contrato Social'
+        : 'Instrumento de Alteração Contratual';
+
+    } catch (err) {
+      setStep(2);
+      document.getElementById('card-3').classList.remove('active');
+      document.getElementById('card-2').classList.add('active');
+      const aviso = document.getElementById('aviso-alteracoes');
+      aviso.className = 'alert alert-error show';
+      aviso.innerHTML = `<svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg> <strong>Erro:</strong> ${err.message}`;
+    }
+  }
+
+  let loadingInterval;
+  function animarLoading() {
+    const steps = [1, 2, 3, 4, 5];
+    let idx = 0;
+    steps.forEach(i => {
+      const el = document.getElementById(`ls-${i}`);
+      el.classList.remove('ativo', 'concluido');
+    });
+    document.getElementById('ls-1').classList.add('ativo');
+    loadingInterval = setInterval(() => {
+      if (idx < steps.length - 1) {
+        document.getElementById(`ls-${steps[idx]}`).classList.remove('ativo');
+        document.getElementById(`ls-${steps[idx]}`).classList.add('concluido');
+        idx++;
+        document.getElementById(`ls-${steps[idx]}`).classList.add('ativo');
+      }
+    }, 3500);
+  }
+
+  function baixarDocumento(formato) {
+    if (!tokenDownload) return;
+    const nomeSemExt = nomeArquivoDownload.replace('.docx', '');
+    const nomeArq = formato === 'pdf' ? `${nomeSemExt}.pdf` : nomeArquivoDownload;
+    const a = document.createElement('a');
+    a.href = `/download/${tokenDownload}/${formato}`;
+    a.download = nomeArq;
+    a.click();
+  }
+
+  function novoDocumento() {
+    textoContrato = '';
+    nomeEmpresa = '';
+    tokenDownload = '';
+    // Reset upload
+    document.getElementById('arquivo-input').value = '';
+    document.getElementById('arquivo-info').classList.remove('show');
+    document.getElementById('btn-proximo-1').disabled = true;
+    // Reset checkboxes e estado
+    foroAutoAtivado = false;
+    const badgeForo = document.getElementById('badge-foro-auto');
+    if (badgeForo) badgeForo.style.display = 'none';
+    tiposSelecionados.clear();
+    Object.keys(tiposMap).forEach(tipo => {
+      const check = document.getElementById(`check-${tipo}`);
+      if (check) check.checked = false;
+      const campo = document.getElementById(`campo-${tipo}`);
+      if (campo) campo.classList.remove('show');
+      const label = check ? check.closest('.tipo-item') : null;
+      if (label) label.classList.remove('selecionado');
+      const desc = document.getElementById(`desc-${tipo}`);
+      if (desc) desc.value = '';
+    });
+    document.getElementById('aviso-alteracoes').classList.remove('show');
+    // Voltar ao passo 1
+    setStep(1);
+    document.getElementById('card-4').classList.remove('active');
+    document.getElementById('card-1').classList.add('active');
+  }
+</script>
+
+</body>
+</html>

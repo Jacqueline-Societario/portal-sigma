@@ -1,0 +1,493 @@
+{% extends "base.html" %}
+{% block title %}Anotações{% endblock %}
+{% block page_title %}Anotações{% endblock %}
+
+{% block extra_head %}
+<link href="{{ url_for('static', filename='quill/quill.snow.css') }}" rel="stylesheet">
+{% endblock %}
+
+{% block extra_styles %}
+/* ── Canvas e layout ─────────────────────────────────────── */
+.anotacoes-page { display: flex; flex-direction: column; gap: 0; height: 100%; }
+
+.anotacoes-toolbar {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0 0 16px;
+  flex-shrink: 0;
+}
+.anotacoes-toolbar-left { display: flex; align-items: center; gap: 10px; }
+.anotacoes-titulo { font-size: 18px; font-weight: 800; color: var(--text); }
+.anotacoes-sub    { font-size: 12px; color: var(--muted); }
+.btn-nova-nota {
+  display: inline-flex; align-items: center; gap: 6px;
+  background: var(--sigma-red); color: #fff;
+  border: none; border-radius: 8px; padding: 9px 16px;
+  font-size: 13px; font-weight: 700; cursor: pointer;
+  transition: background .15s;
+}
+.btn-nova-nota:hover { background: var(--sigma-dark); }
+.btn-nova-nota svg { width: 14px; height: 14px; }
+
+/* ── Canvas das notas ────────────────────────────────────── */
+.notas-canvas-wrap {
+  flex: 1; position: relative;
+  background: #f8f9fb;
+  background-image:
+    radial-gradient(circle, #d1d5db 1px, transparent 1px);
+  background-size: 24px 24px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  overflow: auto;
+  min-height: 600px;
+}
+.notas-canvas {
+  position: relative;
+  min-width: 100%;
+  min-height: 800px;
+}
+
+/* ── Sticky note ─────────────────────────────────────────── */
+.nota-sticky {
+  position: absolute;
+  min-width: 260px; min-height: 200px;
+  width: 320px; height: 280px;
+  border-radius: 10px;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.10), 0 1px 4px rgba(0,0,0,0.06);
+  display: flex; flex-direction: column;
+  resize: both; overflow: hidden;
+  transition: box-shadow .15s;
+  z-index: 10;
+}
+.nota-sticky:hover  { box-shadow: 0 8px 28px rgba(0,0,0,0.14); z-index: 20; }
+.nota-sticky.dragging { box-shadow: 0 16px 40px rgba(0,0,0,0.2); z-index: 100; opacity: .95; }
+
+/* Cores — fundo principal */
+.nota-sticky[data-cor="amarelo"] { background: #FFFDE7; }
+.nota-sticky[data-cor="azul"]    { background: #E3F2FD; }
+.nota-sticky[data-cor="verde"]   { background: #E8F5E9; }
+.nota-sticky[data-cor="rosa"]    { background: #FCE4EC; }
+.nota-sticky[data-cor="branco"]  { background: #FFFFFF; }
+
+/* Header — tom mais escuro */
+.nota-header {
+  display: flex; align-items: center; gap: 8px;
+  padding: 9px 10px 8px;
+  cursor: grab; flex-shrink: 0;
+  border-radius: 10px 10px 0 0;
+  user-select: none;
+}
+.nota-header:active { cursor: grabbing; }
+.nota-sticky[data-cor="amarelo"] .nota-header { background: #FFF9C4; }
+.nota-sticky[data-cor="azul"]    .nota-header { background: #BBDEFB; }
+.nota-sticky[data-cor="verde"]   .nota-header { background: #C8E6C9; }
+.nota-sticky[data-cor="rosa"]    .nota-header { background: #F8BBD0; }
+.nota-sticky[data-cor="branco"]  .nota-header { background: #F3F4F6; }
+
+.nota-titulo-input {
+  flex: 1; border: none; background: transparent;
+  font-size: 13px; font-weight: 700; color: var(--text);
+  outline: none; min-width: 0;
+  font-family: inherit;
+}
+.nota-titulo-input::placeholder { color: #9ca3af; }
+
+.nota-actions { display: flex; align-items: center; gap: 4px; flex-shrink: 0; }
+.nota-btn {
+  width: 24px; height: 24px; border: none; background: transparent;
+  border-radius: 5px; cursor: pointer; display: flex; align-items: center;
+  justify-content: center; color: #9ca3af; transition: background .12s, color .12s;
+}
+.nota-btn:hover { background: rgba(0,0,0,0.08); color: #4b5563; }
+.nota-btn svg { width: 13px; height: 13px; }
+
+/* Color picker popover */
+.cor-picker-wrap { position: relative; }
+.cor-picker-pop {
+  position: absolute; top: calc(100% + 4px); right: 0;
+  background: #fff; border: 1px solid var(--border);
+  border-radius: 8px; box-shadow: var(--shadow-md);
+  padding: 8px; display: none; gap: 6px; flex-wrap: wrap;
+  width: 120px; z-index: 200;
+}
+.cor-picker-pop.open { display: flex; }
+.cor-dot {
+  width: 24px; height: 24px; border-radius: 50%;
+  border: 2px solid transparent; cursor: pointer;
+  transition: transform .1s, border-color .1s;
+}
+.cor-dot:hover { transform: scale(1.15); border-color: rgba(0,0,0,0.2); }
+.cor-dot.ativa  { border-color: rgba(0,0,0,0.4); transform: scale(1.1); }
+.cor-dot[data-cor="amarelo"] { background: #FFF9C4; border-color: #F9A825; }
+.cor-dot[data-cor="azul"]    { background: #BBDEFB; border-color: #1976D2; }
+.cor-dot[data-cor="verde"]   { background: #C8E6C9; border-color: #388E3C; }
+.cor-dot[data-cor="rosa"]    { background: #F8BBD0; border-color: #C2185B; }
+.cor-dot[data-cor="branco"]  { background: #FFFFFF; border-color: #9ca3af; }
+
+/* Editor Quill dentro da nota */
+.nota-quill-wrap {
+  flex: 1; display: flex; flex-direction: column;
+  overflow: hidden; min-height: 0;
+}
+.nota-quill-wrap .ql-toolbar.ql-snow {
+  border: none; border-bottom: 1px solid rgba(0,0,0,0.08);
+  padding: 4px 6px; background: transparent;
+  flex-shrink: 0;
+}
+.nota-quill-wrap .ql-toolbar.ql-snow .ql-formats { margin-right: 6px; }
+.nota-quill-wrap .ql-container.ql-snow {
+  border: none; flex: 1; overflow-y: auto; font-size: 13px;
+  font-family: inherit;
+}
+.nota-quill-wrap .ql-editor {
+  padding: 8px 10px; min-height: 80px;
+  line-height: 1.6; color: var(--text);
+}
+.nota-quill-wrap .ql-editor:focus { outline: none; }
+
+/* Autosave indicator */
+.nota-autosave {
+  position: absolute; bottom: 4px; left: 8px;
+  font-size: 9px; color: #9ca3af;
+  pointer-events: none; opacity: 0; transition: opacity .3s;
+}
+.nota-autosave.show { opacity: 1; }
+
+/* Empty state */
+.canvas-empty {
+  position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+  text-align: center; color: var(--muted);
+}
+.canvas-empty svg { width: 48px; height: 48px; stroke: #d1d5db; margin-bottom: 12px; }
+.canvas-empty-title { font-size: 16px; font-weight: 700; margin-bottom: 6px; }
+.canvas-empty-sub   { font-size: 13px; }
+
+/* Confirm delete overlay */
+.delete-confirm {
+  position: fixed; inset: 0; background: rgba(0,0,0,0.4);
+  z-index: 500; display: flex; align-items: center; justify-content: center;
+}
+.delete-confirm-card {
+  background: #fff; border-radius: 12px; padding: 24px 28px;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.2); max-width: 320px; width: 90%;
+  text-align: center;
+}
+.delete-confirm-title { font-size: 15px; font-weight: 700; margin-bottom: 6px; }
+.delete-confirm-sub   { font-size: 13px; color: var(--muted); margin-bottom: 18px; }
+.delete-confirm-btns  { display: flex; gap: 10px; justify-content: center; }
+{% endblock %}
+
+{% block content %}
+<div class="anotacoes-page">
+
+  <!-- Toolbar -->
+  <div class="anotacoes-toolbar">
+    <div class="anotacoes-toolbar-left">
+      <div>
+        <div class="anotacoes-titulo">Minhas Anotações</div>
+        <div class="anotacoes-sub">Organize lembretes e tarefas. Tudo salvo automaticamente.</div>
+      </div>
+    </div>
+    <button class="btn-nova-nota" id="btnNovaNota">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+      Nova anotação
+    </button>
+  </div>
+
+  <!-- Canvas -->
+  <div class="notas-canvas-wrap" id="canvasWrap">
+    <div class="notas-canvas" id="notasCanvas">
+      <!-- notas carregadas via JS -->
+    </div>
+  </div>
+
+</div>
+
+<!-- Delete confirm -->
+<div class="delete-confirm" id="deleteConfirm" style="display:none;">
+  <div class="delete-confirm-card">
+    <div class="delete-confirm-title">Excluir anotação?</div>
+    <div class="delete-confirm-sub">Esta ação não pode ser desfeita.</div>
+    <div class="delete-confirm-btns">
+      <button class="btn btn-outline" id="deleteCancelar">Cancelar</button>
+      <button class="btn btn-primary" id="deleteConfirmar" style="background:#dc2626;">Excluir</button>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script src="{{ url_for('static', filename='quill/quill.min.js') }}"></script>
+<script>
+(function() {
+'use strict';
+
+const CORES = ['amarelo', 'azul', 'verde', 'rosa', 'branco'];
+const CORES_PROX = { amarelo: 'azul', azul: 'verde', verde: 'rosa', rosa: 'branco', branco: 'amarelo' };
+
+const canvas    = document.getElementById('notasCanvas');
+const canvasWrap = document.getElementById('canvasWrap');
+const btnNova   = document.getElementById('btnNovaNota');
+
+let notas = {};            // id → { el, quill, data }
+let dragging = null;
+let dragOffsetX = 0, dragOffsetY = 0;
+let saveTimers = {};       // id → timer
+
+/* ── Autosave ──────────────────────────────────────── */
+function scheduleSave(id, campos) {
+  clearTimeout(saveTimers[id]);
+  const nota = notas[id];
+  if (!nota) return;
+  const autosave = nota.el.querySelector('.nota-autosave');
+  if (autosave) { autosave.textContent = 'Salvando...'; autosave.classList.add('show'); }
+  saveTimers[id] = setTimeout(function() {
+    fetch('/api/anotacoes/' + id, {
+      method: 'PUT',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify(campos)
+    }).then(function(r) {
+      if (autosave) {
+        autosave.textContent = r.ok ? 'Salvo' : 'Erro ao salvar';
+        setTimeout(function() { autosave.classList.remove('show'); }, 1500);
+      }
+    }).catch(function() {
+      if (autosave) { autosave.textContent = 'Erro ao salvar'; }
+    });
+  }, 1200);
+}
+
+/* ── Criar elemento de nota ────────────────────────── */
+function criarElementoNota(data) {
+  const el = document.createElement('div');
+  el.className = 'nota-sticky';
+  el.dataset.id  = data.id;
+  el.dataset.cor = data.cor || 'amarelo';
+  el.style.left   = (data.pos_x || 20) + 'px';
+  el.style.top    = (data.pos_y || 20) + 'px';
+  el.style.width  = (data.largura || 320) + 'px';
+  el.style.height = (data.altura  || 260) + 'px';
+
+  el.innerHTML = `
+    <div class="nota-header" data-drag="true">
+      <input type="text" class="nota-titulo-input" value="${esc(data.titulo || '')}" placeholder="Título da anotação">
+      <div class="nota-actions">
+        <div class="cor-picker-wrap">
+          <button class="nota-btn nota-cor-btn" title="Trocar cor">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M12 2a10 10 0 0 1 0 20"/></svg>
+          </button>
+          <div class="cor-picker-pop">
+            ${CORES.map(c => `<div class="cor-dot ${c === (data.cor||'amarelo') ? 'ativa' : ''}" data-cor="${c}" title="${c}"></div>`).join('')}
+          </div>
+        </div>
+        <button class="nota-btn nota-del-btn" title="Excluir anotação">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg>
+        </button>
+      </div>
+    </div>
+    <div class="nota-quill-wrap">
+      <div class="nota-editor" id="quill-${data.id}"></div>
+    </div>
+    <span class="nota-autosave"></span>
+  `;
+
+  canvas.appendChild(el);
+
+  /* Quill */
+  const quillEl = el.querySelector('#quill-' + data.id);
+  const quill = new Quill(quillEl, {
+    theme: 'snow',
+    placeholder: 'Escreva algo...',
+    modules: {
+      toolbar: [
+        ['bold', 'italic', 'underline'],
+        [{ list: 'ordered' }, { list: 'bullet' }],
+        ['link'],
+        ['clean'],
+      ]
+    }
+  });
+  if (data.conteudo) {
+    quill.clipboard.dangerouslyPasteHTML(data.conteudo);
+  }
+
+  quill.on('text-change', function() {
+    const html = quillEl.querySelector('.ql-editor').innerHTML;
+    scheduleSave(data.id, { conteudo: html });
+  });
+
+  /* Título */
+  const tituloInput = el.querySelector('.nota-titulo-input');
+  tituloInput.addEventListener('input', function() {
+    scheduleSave(data.id, { titulo: tituloInput.value });
+  });
+
+  /* Drag */
+  el.querySelector('[data-drag]').addEventListener('mousedown', function(e) {
+    if (e.target.tagName === 'INPUT' || e.target.tagName === 'BUTTON' ||
+        e.target.closest('button') || e.target.closest('.cor-picker-pop')) return;
+    startDrag(e, el);
+  });
+
+  /* Cor */
+  el.querySelector('.nota-cor-btn').addEventListener('click', function(e) {
+    e.stopPropagation();
+    const pop = el.querySelector('.cor-picker-pop');
+    pop.classList.toggle('open');
+  });
+  el.querySelectorAll('.cor-dot').forEach(function(dot) {
+    dot.addEventListener('click', function(e) {
+      e.stopPropagation();
+      const cor = dot.dataset.cor;
+      el.dataset.cor = cor;
+      el.querySelectorAll('.cor-dot').forEach(d => d.classList.remove('ativa'));
+      dot.classList.add('ativa');
+      el.querySelector('.cor-picker-pop').classList.remove('open');
+      scheduleSave(data.id, { cor });
+    });
+  });
+
+  /* Deletar */
+  el.querySelector('.nota-del-btn').addEventListener('click', function() {
+    confirmarDelete(data.id, el);
+  });
+
+  /* Fechar color picker ao clicar fora */
+  document.addEventListener('click', function(e) {
+    if (!el.contains(e.target)) {
+      el.querySelector('.cor-picker-pop').classList.remove('open');
+    }
+  });
+
+  notas[data.id] = { el, quill, data };
+
+  /* ResizeObserver — salvar posição */
+  const ro = new ResizeObserver(function() {
+    scheduleSave(data.id, {
+      largura: el.offsetWidth,
+      altura:  el.offsetHeight,
+    });
+  });
+  ro.observe(el);
+
+  return el;
+}
+
+/* ── Drag ──────────────────────────────────────────── */
+function startDrag(e, el) {
+  dragging = el;
+  el.classList.add('dragging');
+  const wrapRect = canvasWrap.getBoundingClientRect();
+  dragOffsetX = e.clientX - (el.offsetLeft - canvasWrap.scrollLeft + wrapRect.left - canvasWrap.getBoundingClientRect().left);
+  dragOffsetY = e.clientY - (el.offsetTop  - canvasWrap.scrollTop  + wrapRect.top  - canvasWrap.getBoundingClientRect().top);
+  // Simplificado: offset relativo ao canvas
+  dragOffsetX = e.clientX - el.getBoundingClientRect().left;
+  dragOffsetY = e.clientY - el.getBoundingClientRect().top;
+  e.preventDefault();
+}
+
+document.addEventListener('mousemove', function(e) {
+  if (!dragging) return;
+  const wrapRect = canvasWrap.getBoundingClientRect();
+  const x = e.clientX - wrapRect.left + canvasWrap.scrollLeft - dragOffsetX;
+  const y = e.clientY - wrapRect.top  + canvasWrap.scrollTop  - dragOffsetY;
+  dragging.style.left = Math.max(0, x) + 'px';
+  dragging.style.top  = Math.max(0, y) + 'px';
+});
+
+document.addEventListener('mouseup', function() {
+  if (!dragging) return;
+  dragging.classList.remove('dragging');
+  const id  = parseInt(dragging.dataset.id);
+  const x   = parseInt(dragging.style.left) || 0;
+  const y   = parseInt(dragging.style.top)  || 0;
+  scheduleSave(id, { pos_x: x, pos_y: y });
+  dragging = null;
+});
+
+/* ── Delete confirm ────────────────────────────────── */
+let deletePendente = null;
+const deleteConfirm   = document.getElementById('deleteConfirm');
+const deleteCancelar  = document.getElementById('deleteCancelar');
+const deleteConfirmar = document.getElementById('deleteConfirmar');
+
+function confirmarDelete(id, el) {
+  deletePendente = { id, el };
+  deleteConfirm.style.display = 'flex';
+}
+deleteCancelar.addEventListener('click', function() {
+  deleteConfirm.style.display = 'none';
+  deletePendente = null;
+});
+deleteConfirmar.addEventListener('click', function() {
+  if (!deletePendente) return;
+  const { id, el } = deletePendente;
+  fetch('/api/anotacoes/' + id, { method: 'DELETE' }).then(function() {
+    el.remove();
+    delete notas[id];
+    deleteConfirm.style.display = 'none';
+    deletePendente = null;
+    if (Object.keys(notas).length === 0) mostrarVazio();
+  });
+});
+
+/* ── Empty state ───────────────────────────────────── */
+function mostrarVazio() {
+  if (canvas.querySelector('.canvas-empty')) return;
+  canvas.innerHTML = `
+    <div class="canvas-empty">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="8" y1="12" x2="16" y2="12"/><line x1="8" y1="8" x2="12" y2="8"/><line x1="8" y1="16" x2="14" y2="16"/></svg>
+      <div class="canvas-empty-title">Nenhuma anotação ainda</div>
+      <div class="canvas-empty-sub">Clique em "Nova anotação" para começar</div>
+    </div>`;
+}
+function removerVazio() {
+  const v = canvas.querySelector('.canvas-empty');
+  if (v) v.remove();
+}
+
+/* ── Nova nota ─────────────────────────────────────── */
+function novaNotaCor() {
+  const total = Object.keys(notas).length;
+  return CORES[total % CORES.length];
+}
+
+btnNova.addEventListener('click', function() {
+  const total = Object.keys(notas).length;
+  const col   = total % 4;
+  const pos_x = 20 + col * 30;
+  const pos_y = 20 + col * 30;
+  const cor   = novaNotaCor();
+
+  fetch('/api/anotacoes', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ titulo: '', conteudo: '', cor, pos_x, pos_y, largura: 320, altura: 280 })
+  }).then(r => r.json()).then(function(data) {
+    removerVazio();
+    const el = criarElementoNota(data);
+    // Focar no título
+    setTimeout(function() { el.querySelector('.nota-titulo-input').focus(); }, 100);
+  });
+});
+
+/* ── Carregar notas ────────────────────────────────── */
+fetch('/api/anotacoes').then(r => r.json()).then(function(lista) {
+  if (!lista || !lista.length) { mostrarVazio(); return; }
+  lista.forEach(function(data) { criarElementoNota(data); });
+}).catch(function() { mostrarVazio(); });
+
+/* ── Utils ─────────────────────────────────────────── */
+function esc(s) {
+  return (s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+/* Fechar pickers ao clicar fora */
+document.addEventListener('click', function() {
+  document.querySelectorAll('.cor-picker-pop.open').forEach(function(p) {
+    p.classList.remove('open');
+  });
+});
+
+})();
+</script>
+{% endblock %}

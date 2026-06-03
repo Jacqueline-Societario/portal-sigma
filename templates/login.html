@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Acesso — Sigma Societário</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    background: #f3f4f6;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+  }
+  .card {
+    background: white;
+    border-radius: 14px;
+    box-shadow: 0 4px 24px rgba(0,0,0,0.08);
+    padding: 44px 40px;
+    width: 100%;
+    max-width: 380px;
+    text-align: center;
+  }
+  .logo {
+    width: 64px;
+    height: 64px;
+    background: #A72C31;
+    border-radius: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 900;
+    font-size: 28px;
+    color: white;
+    letter-spacing: -1px;
+    margin: 0 auto 20px;
+  }
+  h1 {
+    font-size: 20px;
+    font-weight: 700;
+    color: #1f2937;
+    margin-bottom: 4px;
+  }
+  p.sub {
+    font-size: 13px;
+    color: #6b7280;
+    margin-bottom: 28px;
+  }
+  .campo {
+    text-align: left;
+    margin-bottom: 16px;
+  }
+  label {
+    font-size: 13px;
+    font-weight: 600;
+    color: #374151;
+    display: block;
+    margin-bottom: 6px;
+  }
+  input[type=email],
+  input[type=password] {
+    width: 100%;
+    padding: 11px 14px;
+    border: 1px solid #d1d5db;
+    border-radius: 8px;
+    font-size: 15px;
+    font-family: inherit;
+    transition: border .2s;
+  }
+  input[type=password] { letter-spacing: 2px; }
+  input[type=email]:focus,
+  input[type=password]:focus {
+    outline: none;
+    border-color: #A72C31;
+    box-shadow: 0 0 0 3px rgba(167,44,49,0.1);
+  }
+  .erro {
+    background: #fee2e2;
+    color: #dc2626;
+    border: 1px solid #fca5a5;
+    border-radius: 8px;
+    padding: 10px 14px;
+    font-size: 13px;
+    margin-bottom: 16px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    text-align: left;
+  }
+  button {
+    width: 100%;
+    padding: 12px;
+    background: #A72C31;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background .2s;
+    margin-top: 4px;
+  }
+  button:hover { background: #7a1f23; }
+  footer {
+    margin-top: 28px;
+    font-size: 12px;
+    color: #9ca3af;
+  }
+</style>
+</head>
+<body>
+
+<div class="card">
+  <div class="logo">S</div>
+  <h1>Departamento Societário</h1>
+  <p class="sub">Sigma Contabilidade — Acesso Restrito</p>
+
+  {% if erro %}
+  <div class="erro">
+    <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+      <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+    </svg>
+    {{ erro }}
+  </div>
+  {% endif %}
+
+  <form method="POST">
+    <div class="campo">
+      <label for="email">E-mail corporativo</label>
+      <input type="email" id="email" name="email" placeholder="societario@gsigma.com.br"
+             autofocus autocomplete="email" required />
+    </div>
+    <div class="campo">
+      <label for="senha">Senha de acesso</label>
+      <input type="password" id="senha" name="senha" placeholder="••••••••••" autocomplete="current-password" required />
+    </div>
+    <button type="submit">Entrar</button>
+  </form>
+
+  <div style="margin-top:16px; font-size:13px;">
+    <a href="{{ url_for('auth.esqueceu_senha') }}" style="color:#A72C31; text-decoration:none;">Esqueceu sua senha?</a>
+  </div>
+</div>
+
+<footer>Uso interno — Sigma Contabilidade</footer>
+
+</body>
+</html>

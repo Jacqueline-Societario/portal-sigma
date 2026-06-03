@@ -1,0 +1,447 @@
+{% extends "base.html" %}
+{% block title %}Declarações e Requerimentos{% endblock %}
+{% block page_title %}Declarações e Requerimentos{% endblock %}
+
+{% block extra_styles %}
+/* Uso do Solo */
+#painel-uso-solo { display: none; }
+.uso-solo-info {
+  background: #fff8f0; border: 1px solid #f59e0b;
+  border-radius: 8px; padding: 12px 16px; margin-bottom: 20px;
+  font-size: 13px; color: #78350f;
+}
+.uso-solo-info strong { color: #92400e; }
+/* Linha de CNAE individual */
+.cnae-row {
+  display: grid; grid-template-columns: 1fr auto; gap: 12px;
+  align-items: center; margin-bottom: 10px;
+}
+.cnae-row .cnae-input { width: 100%; padding: 10px 14px; border: 1px solid #ddd;
+  border-radius: 6px; font-size: 14px; font-family: inherit; outline: none; transition: border-color .15s;
+}
+.cnae-row .cnae-input:focus { border-color: var(--sigma-red); }
+.cnae-escritorio {
+  display: flex; align-items: center; gap: 8px; white-space: nowrap;
+  background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px;
+  padding: 8px 12px; font-size: 13px;
+}
+.cnae-escritorio span { font-weight: 600; color: #475569; margin-right: 2px; }
+.cnae-escritorio label { display: flex; align-items: center; gap: 4px; cursor: pointer; font-size: 13px; font-weight: 500; }
+.cnae-remove {
+  background: none; border: none; color: #dc2626; cursor: pointer;
+  font-size: 18px; line-height: 1; padding: 0 4px; margin-left: 4px;
+  opacity: 0.6; transition: opacity .15s;
+}
+.cnae-remove:hover { opacity: 1; }
+.btn-add-cnae {
+  background: none; border: 1px dashed #94a3b8; border-radius: 6px;
+  color: #475569; font-size: 13px; font-weight: 600; cursor: pointer;
+  padding: 8px 16px; width: 100%; text-align: center; transition: all .15s; margin-top: 4px;
+}
+.btn-add-cnae:hover { border-color: var(--sigma-red); color: var(--sigma-red); background: #fff5f5; }
+.form-card {
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 28px;
+  margin-bottom: 24px;
+}
+.form-card h2 {
+  font-size: 16px;
+  font-weight: 700;
+  margin-bottom: 20px;
+  color: var(--sigma-red);
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 10px;
+}
+.form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.form-group { margin-bottom: 16px; }
+.form-group label { display: block; font-size: 13px; font-weight: 600; color: #444; margin-bottom: 6px; }
+.form-group input,
+.form-group select,
+.form-group textarea {
+  width: 100%; padding: 10px 14px; border: 1px solid #ddd;
+  border-radius: 6px; font-size: 14px; font-family: inherit;
+  outline: none; transition: border-color .15s; resize: vertical;
+}
+.form-group input:focus,
+.form-group select:focus,
+.form-group textarea:focus { border-color: var(--sigma-red); }
+.required { color: var(--sigma-red); }
+.hint { font-size: 11px; color: #888; margin-top: 3px; }
+.actions { display: flex; gap: 12px; align-items: center; margin-top: 8px; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.spin-icon {
+  width: 18px; height: 18px;
+  border: 2px solid rgba(255,255,255,.4);
+  border-top-color: #fff;
+  border-radius: 50%; animation: spin .6s linear infinite;
+  display: inline-block; vertical-align: middle;
+}
+#resultado {
+  display: none; background: #f0fdf4; border: 1px solid #86efac;
+  border-radius: var(--radius); padding: 20px; margin-top: 20px;
+}
+#resultado h3 { color: #166534; margin-bottom: 12px; font-size: 15px; }
+#msg-erro {
+  display: none; background: #fef2f2; border: 1px solid #fca5a5;
+  border-radius: var(--radius); padding: 14px; color: #991b1b;
+  font-size: 14px; margin-top: 16px;
+}
+{% endblock %}
+
+{% block content %}
+<p style="color:#666; font-size:14px; margin-bottom:24px;">
+  Preencha os dados abaixo para gerar declarações, requerimentos e outros documentos oficiais.
+</p>
+
+<!-- Card de tipo — sempre visível -->
+<div class="form-card">
+  <h2>Tipo de Documento</h2>
+  <div class="form-group">
+    <label for="tipo">Documento <span class="required">*</span></label>
+    <select id="tipo" name="tipo" required>
+      <option value="">— Selecione —</option>
+      {% for t in tipos %}
+      <option value="{{ t }}">{{ t }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <div class="form-group" id="outro-tipo-group" style="display:none;">
+    <label for="tipo_outro">Descreva o documento <span class="required">*</span></label>
+    <input type="text" id="tipo_outro" name="tipo_outro" placeholder="Descreva o tipo de documento">
+  </div>
+  <div class="form-group" id="destinatario-group">
+    <label for="destinatario">Destinatário</label>
+    <input type="text" id="destinatario" name="destinatario"
+           placeholder="Ex: Receita Federal do Brasil, Prefeitura de Goiânia, CBMGO...">
+  </div>
+</div>
+
+<form id="form-declaracao">
+
+  <!-- Empresa -->
+  <div class="form-card">
+    <h2>Empresa / Declarante</h2>
+    <div class="form-row">
+      <div class="form-group">
+        <label for="empresa_nome">Razão Social <span class="required">*</span></label>
+        <input type="text" id="empresa_nome" name="empresa_nome" placeholder="EMPRESA EXEMPLO LTDA">
+      </div>
+      <div class="form-group">
+        <label for="empresa_cnpj">CNPJ</label>
+        <input type="text" id="empresa_cnpj" name="empresa_cnpj" placeholder="00.000.000/0001-00">
+      </div>
+    </div>
+    <div class="form-group">
+      <label for="empresa_qualificacao">Dados complementares da empresa</label>
+      <textarea id="empresa_qualificacao" name="empresa_qualificacao" rows="2"
+                placeholder="Ex: com sede em Goiânia/GO, na Rua X, n° 000..."></textarea>
+    </div>
+  </div>
+
+  <!-- Representante -->
+  <div class="form-card">
+    <h2>Representante Legal</h2>
+    <div class="form-row">
+      <div class="form-group">
+        <label for="representante_nome">Nome <span class="required">*</span></label>
+        <input type="text" id="representante_nome" name="representante_nome"
+               placeholder="Nome completo do sócio ou representante">
+      </div>
+      <div class="form-group">
+        <label for="representante_cpf">CPF</label>
+        <input type="text" id="representante_cpf" name="representante_cpf"
+               placeholder="000.000.000-00">
+      </div>
+    </div>
+    <div class="form-group">
+      <label for="representante_qualificacao">Qualificação</label>
+      <textarea id="representante_qualificacao" name="representante_qualificacao" rows="2"
+                placeholder="Ex: brasileiro, empresário, sócio-administrador da empresa..."></textarea>
+    </div>
+  </div>
+
+  <!-- Objeto -->
+  <div class="form-card">
+    <h2>Objeto e Finalidade</h2>
+    <div class="form-group">
+      <label for="objeto">Objeto / Finalidade <span class="required">*</span></label>
+      <textarea id="objeto" name="objeto" rows="4" required
+                placeholder="Descreva o que a declaração ou requerimento deve afirmar ou solicitar. Ex: declarar a inexistência de débitos junto à Prefeitura de Goiânia referentes ao exercício de 2024..."></textarea>
+    </div>
+    <div class="form-group">
+      <label for="observacoes">Informações adicionais</label>
+      <textarea id="observacoes" name="observacoes" rows="2"
+                placeholder="Qualquer dado adicional relevante..."></textarea>
+    </div>
+  </div>
+
+  <!-- Botão -->
+  <div class="actions">
+    <button type="submit" class="btn btn-primary" id="btn-gerar">
+      <span id="btn-label">Gerar Documento</span>
+      <span id="spinner" style="display:none;">
+        <span class="spin-icon"></span>
+      </span>
+    </button>
+    <span id="status-msg" style="font-size:13px; color:#666;"></span>
+  </div>
+
+</form>
+
+<!-- FORMULÁRIO ESPECIAL — Uso do Solo -->
+<div id="painel-uso-solo">
+  <div class="uso-solo-info">
+    <strong>Requerimento de Uso do Solo — Prefeitura de Goiânia</strong><br>
+    Preencha os campos abaixo. Telefone e e-mail da Sigma são preenchidos automaticamente.
+  </div>
+  <form id="form-uso-solo">
+    <div class="form-card">
+      <h2>Dados do Estabelecimento</h2>
+      <div class="form-group">
+        <label for="us-empresa">Nome / Razão Social <span class="required">*</span></label>
+        <input type="text" id="us-empresa" placeholder="EMPRESA EXEMPLO LTDA">
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label for="us-iptu">Inscrição Imobiliária (IPTU) <span class="required">*</span></label>
+          <input type="text" id="us-iptu" placeholder="000.000.0000.000-0">
+        </div>
+        <div class="form-group">
+          <label for="us-area">Área Ocupada (m²) <span class="required">*</span></label>
+          <input type="text" id="us-area" placeholder="Ex: 45,00">
+        </div>
+      </div>
+      <div class="form-group">
+        <label for="us-endereco">Endereço do Estabelecimento <span class="required">*</span></label>
+        <input type="text" id="us-endereco" placeholder="Rua/Av., Quadra, Lote, Bairro, CEP">
+      </div>
+    </div>
+
+    <div class="form-card">
+      <h2>Atividades Econômicas (CNAEs)</h2>
+      <div class="hint" style="margin-bottom:12px;">Informe o código e descrição de cada CNAE. Marque se aquela atividade é exercida como escritório.</div>
+      <div id="cnaes-lista"></div>
+      <button type="button" class="btn-add-cnae" onclick="adicionarCnae()">+ Adicionar CNAE</button>
+    </div>
+
+    <div class="form-card">
+      <h2>Observações</h2>
+      <div class="form-group">
+        <label for="us-obs">Observações <span style="color:#888;font-weight:400">(opcional)</span></label>
+        <textarea id="us-obs" rows="3" placeholder="Informações adicionais relevantes..."></textarea>
+      </div>
+      <div class="form-group" style="background:#f8fafc; border-radius:6px; padding:12px; border:1px solid #e2e8f0;">
+        <div style="font-size:12px; color:#64748b; font-weight:600; margin-bottom:4px;">DADOS FIXOS — SIGMA CONTABILIDADE</div>
+        <div style="font-size:13px; color:#374151;">Telefone: <strong>(62) 3095-6240</strong> &nbsp;|&nbsp; E-mail: <strong>societario@gsigma.com.br</strong></div>
+      </div>
+    </div>
+
+    <div class="actions">
+      <button type="submit" class="btn btn-primary" id="btn-gerar-uso-solo">
+        <span id="btn-uso-solo-label">Gerar Requerimento</span>
+        <span id="spinner-uso-solo" style="display:none;"><span class="spin-icon"></span></span>
+      </button>
+      <span id="status-uso-solo" style="font-size:13px; color:#666;"></span>
+    </div>
+  </form>
+</div>
+
+<div id="msg-erro"></div>
+
+<div id="resultado">
+  <h3>Documento gerado com sucesso!</h3>
+  <p style="font-size:14px; color:#166534; margin-bottom:16px;">
+    Faça o download para revisar e finalizar.
+  </p>
+  <a id="link-docx" href="#" class="btn btn-primary">Baixar Word (.docx)</a>
+  <a id="link-pdf" href="#" class="btn btn-secondary" style="display:none; margin-left:8px;">Baixar PDF</a>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+var FORM_PADRAO = document.getElementById('form-declaracao');
+var PAINEL_SOLO = document.getElementById('painel-uso-solo');
+
+document.getElementById('tipo').addEventListener('change', function() {
+  var v = this.value;
+  document.getElementById('outro-tipo-group').style.display =
+    v === 'Outro (descrever)' ? 'block' : 'none';
+
+  var isUsoSolo = (v === 'Requerimento de Uso do Solo - Goiânia');
+  FORM_PADRAO.style.display   = isUsoSolo ? 'none' : 'block';
+  PAINEL_SOLO.style.display   = isUsoSolo ? 'block' : 'none';
+  document.getElementById('destinatario-group').style.display = isUsoSolo ? 'none' : 'block';
+});
+
+// ── CNAEs dinâmicos ────────────────────────────────────────────────
+var _cnaeCounter = 0;
+
+function adicionarCnae(codigo, escritorio) {
+  _cnaeCounter++;
+  var idx = _cnaeCounter;
+  var checked_sim = escritorio === 'sim' ? 'checked' : '';
+  var checked_nao = escritorio !== 'sim' ? 'checked' : '';
+  var html = '<div class="cnae-row" id="cnae-row-' + idx + '">' +
+    '<input type="text" class="cnae-input" id="cnae-cod-' + idx + '" ' +
+    '       placeholder="Ex: 4782-2/01 Comércio varejista de calçados" ' +
+    '       value="' + (codigo || '') + '">' +
+    '<div class="cnae-escritorio">' +
+    '  <span>Escritório:</span>' +
+    '  <label><input type="radio" name="cnae-esc-' + idx + '" value="sim" ' + checked_sim + '> Sim</label>' +
+    '  <label><input type="radio" name="cnae-esc-' + idx + '" value="nao" ' + checked_nao + '> Não</label>' +
+    '  <button type="button" class="cnae-remove" onclick="removerCnae(' + idx + ')" title="Remover">×</button>' +
+    '</div>' +
+    '</div>';
+  document.getElementById('cnaes-lista').insertAdjacentHTML('beforeend', html);
+}
+
+function removerCnae(idx) {
+  var row = document.getElementById('cnae-row-' + idx);
+  if (row && document.querySelectorAll('.cnae-row').length > 1) row.remove();
+}
+
+function coletarCnaes() {
+  var rows = document.querySelectorAll('.cnae-row');
+  var lista = [];
+  rows.forEach(function(row) {
+    var idx = row.id.replace('cnae-row-', '');
+    var cod = document.getElementById('cnae-cod-' + idx);
+    if (!cod) return;
+    var val = cod.value.trim();
+    if (!val) return;
+    var esc = row.querySelector('input[name="cnae-esc-' + idx + '"]:checked');
+    lista.push({ codigo: val, escritorio: esc ? esc.value : 'nao' });
+  });
+  return lista;
+}
+
+// Inicializar com 3 campos
+adicionarCnae(); adicionarCnae(); adicionarCnae();
+
+// Submit Uso do Solo
+document.getElementById('form-uso-solo').addEventListener('submit', async function(e) {
+  e.preventDefault();
+  var btn     = document.getElementById('btn-gerar-uso-solo');
+  var spinner = document.getElementById('spinner-uso-solo');
+  var status  = document.getElementById('status-uso-solo');
+  var msgErro = document.getElementById('msg-erro');
+  var resultado = document.getElementById('resultado');
+
+  btn.disabled = true;
+  spinner.style.display = 'inline-block';
+  status.textContent = 'Gerando documento...';
+  msgErro.style.display = 'none';
+  resultado.style.display = 'none';
+
+  var cnaes_lista = coletarCnaes();
+  if (cnaes_lista.length === 0) {
+    msgErro.textContent = 'Informe pelo menos um CNAE.';
+    msgErro.style.display = 'block';
+    btn.disabled = false;
+    spinner.style.display = 'none';
+    status.textContent = '';
+    return;
+  }
+
+  var dados = {
+    empresa_nome:          document.getElementById('us-empresa').value.trim(),
+    inscricao_imobiliaria: document.getElementById('us-iptu').value.trim(),
+    endereco:              document.getElementById('us-endereco').value.trim(),
+    area_m2:               document.getElementById('us-area').value.trim(),
+    cnaes_lista:           cnaes_lista,
+    observacoes:           document.getElementById('us-obs').value.trim(),
+  };
+
+  try {
+    var resp = await fetch('/declaracoes/uso-do-solo', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify(dados)
+    });
+    var json = await resp.json();
+    if (json.erro) {
+      msgErro.textContent = json.erro;
+      msgErro.style.display = 'block';
+    } else {
+      document.getElementById('link-docx').href = '/declaracoes/download/' + json.token;
+      var linkPdf = document.getElementById('link-pdf');
+      if (json.nome_pdf) {
+        linkPdf.href = '/declaracoes/download-pdf/' + json.token;
+        linkPdf.style.display = 'inline-block';
+      } else {
+        linkPdf.style.display = 'none';
+      }
+      resultado.style.display = 'block';
+      resultado.scrollIntoView({behavior: 'smooth', block: 'center'});
+    }
+  } catch(err) {
+    msgErro.textContent = 'Erro de conexão. Tente novamente.';
+    msgErro.style.display = 'block';
+  } finally {
+    btn.disabled = false;
+    spinner.style.display = 'none';
+    status.textContent = '';
+  }
+});
+
+document.getElementById('form-declaracao').addEventListener('submit', async function(e) {
+  e.preventDefault();
+  const btn = document.getElementById('btn-gerar');
+  const spinner = document.getElementById('spinner');
+  const resultado = document.getElementById('resultado');
+  const msgErro = document.getElementById('msg-erro');
+
+  btn.disabled = true;
+  spinner.style.display = 'inline-block';
+  document.getElementById('status-msg').textContent = 'Gerando com IA... aguarde.';
+  resultado.style.display = 'none';
+  msgErro.style.display = 'none';
+
+  let tipoFinal = document.getElementById('tipo').value;
+  if (tipoFinal === 'Outro (descrever)') {
+    tipoFinal = document.getElementById('tipo_outro').value.trim() || 'Declaração';
+  }
+
+  const dados = {
+    tipo: tipoFinal,
+    destinatario: document.getElementById('destinatario').value.trim(),
+    empresa_nome: document.getElementById('empresa_nome').value.trim(),
+    empresa_cnpj: document.getElementById('empresa_cnpj').value.trim(),
+    empresa_qualificacao: document.getElementById('empresa_qualificacao').value.trim(),
+    representante_nome: document.getElementById('representante_nome').value.trim(),
+    representante_cpf: document.getElementById('representante_cpf').value.trim(),
+    representante_qualificacao: document.getElementById('representante_qualificacao').value.trim(),
+    objeto: document.getElementById('objeto').value.trim(),
+    observacoes: document.getElementById('observacoes').value.trim(),
+  };
+
+  try {
+    const resp = await fetch('/declaracoes/gerar', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify(dados)
+    });
+    const json = await resp.json();
+    if (json.erro) {
+      msgErro.textContent = json.erro;
+      msgErro.style.display = 'block';
+    } else {
+      document.getElementById('link-docx').href = `/declaracoes/download/${json.token}`;
+      document.getElementById('link-pdf').style.display = 'none';
+      resultado.style.display = 'block';
+      resultado.scrollIntoView({behavior: 'smooth', block: 'center'});
+    }
+  } catch(err) {
+    msgErro.textContent = 'Erro de conexão. Tente novamente.';
+    msgErro.style.display = 'block';
+  } finally {
+    btn.disabled = false;
+    spinner.style.display = 'none';
+    document.getElementById('status-msg').textContent = '';
+  }
+});
+</script>
+{% endblock %}

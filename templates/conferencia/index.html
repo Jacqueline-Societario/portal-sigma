@@ -1,0 +1,1191 @@
+{% extends "base.html" %}
+{% block title %}Conferência de Contrato{% endblock %}
+{% block page_title %}Conferência de Contrato Social{% endblock %}
+
+{% block extra_styles %}
+/* ── Utilitários de fase ── */
+.fase { display: none; }
+.fase.ativa { display: block; }
+
+/* ── Upload boxes (fase 1) ── */
+.upload-grid-2 {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 16px;
+  margin-bottom: 16px;
+}
+.upload-box-inicial {
+  border: 2px dashed var(--border);
+  border-radius: var(--radius);
+  padding: 20px;
+  background: var(--white);
+  cursor: pointer;
+  position: relative;
+  min-height: 90px;
+  transition: border-color .2s, background .2s;
+}
+.upload-box-inicial:hover, .upload-box-inicial.dragover {
+  border-color: var(--sigma-red);
+  background: var(--sigma-light);
+}
+.upload-box-inicial.has-file {
+  border-color: #16a34a;
+  background: #f0fdf4;
+}
+.upload-box-inicial input[type=file] {
+  position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%;
+}
+.upload-label-row {
+  font-size: 13px; font-weight: 700; display: flex; align-items: center;
+  gap: 8px; margin-bottom: 4px; flex-wrap: wrap;
+}
+.upload-hint { font-size: 11px; color: var(--muted); line-height: 1.4; }
+.file-nome-box { font-size: 11px; color: #16a34a; font-weight: 600; margin-top: 6px; display: none; }
+.upload-box-inicial.has-file .file-nome-box { display: block; }
+
+/* ── Badges ── */
+.badge-obrig {
+  font-size: 10px; background: #fef2f2; color: var(--sigma-red);
+  border: 1px solid #fca5a5; border-radius: 4px; padding: 1px 6px; font-weight: 600;
+}
+.badge-opc {
+  font-size: 10px; background: #f1f5f9; color: #475569;
+  border: 1px solid #cbd5e1; border-radius: 4px; padding: 1px 6px; font-weight: 600;
+}
+.badge-nao-exig {
+  font-size: 10px; background: #fef2f2; color: #dc2626;
+  border: 1px solid #fca5a5; border-radius: 4px; padding: 1px 6px; font-weight: 600;
+}
+
+/* ── Botões ── */
+.btn-primary {
+  background: var(--sigma-red); color: #fff;
+  padding: 11px 28px; border-radius: var(--radius);
+  font-size: 14px; font-weight: 700; border: none; cursor: pointer;
+  transition: background .15s; display: inline-flex; align-items: center; gap: 6px;
+}
+.btn-primary:hover:not(:disabled) { background: var(--sigma-dark); }
+.btn-primary:disabled { background: #ccc; cursor: not-allowed; }
+.btn-secondary {
+  background: transparent; color: var(--sigma-red);
+  border: 1px solid var(--sigma-red);
+  padding: 10px 20px; border-radius: var(--radius);
+  font-size: 13px; font-weight: 600; cursor: pointer; transition: all .15s;
+}
+.btn-secondary:hover { background: var(--sigma-light); }
+
+/* ── Info do processo (fase 2) ── */
+.info-processo-box {
+  background: var(--sigma-light); border: 1px solid #fca5a5;
+  border-left: 4px solid var(--sigma-red);
+  border-radius: var(--radius); padding: 14px 18px; margin-bottom: 20px;
+}
+.info-processo-box strong { color: var(--sigma-red); }
+.info-processo-box .info-row { font-size: 13px; color: var(--text); margin: 2px 0; }
+
+/* ── Bloco por estabelecimento ── */
+.bloco-estab {
+  border: 1px solid var(--border); border-radius: var(--radius);
+  background: var(--white); margin-bottom: 24px; overflow: hidden;
+}
+.bloco-header {
+  background: #f8fafc; border-bottom: 1px solid var(--border);
+  padding: 12px 18px; display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+}
+.bloco-titulo {
+  font-size: 14px; font-weight: 700; color: var(--sigma-red);
+  text-transform: uppercase; letter-spacing: .5px;
+}
+.bloco-cnpj {
+  font-size: 12px; color: var(--muted); font-family: monospace;
+}
+.bloco-alteracoes {
+  font-size: 12px; color: var(--muted); padding: 6px 18px 10px;
+  border-bottom: 1px solid var(--border);
+}
+
+/* ── Docs grid dentro do bloco ── */
+.docs-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+  padding: 14px 16px;
+}
+.doc-box {
+  border: 2px solid var(--border);
+  border-radius: var(--radius); padding: 12px 14px;
+  background: var(--white); position: relative;
+  transition: border-color .15s, background .15s;
+}
+.doc-box.obrigatorio   { border-color: #16a34a; background: #f0fdf4; }
+.doc-box.nao-obrigatorio { border-color: #dc2626; background: #fef2f2; }
+.doc-box.has-file      { border-color: #16a34a; background: #f0fdf4; }
+.doc-box.ignorado      { border-color: #d97706; background: #fffbeb; opacity: .8; }
+
+.doc-header {
+  display: flex; align-items: center; gap: 6px; margin-bottom: 8px; flex-wrap: wrap;
+}
+.doc-label { font-size: 12px; font-weight: 700; color: var(--text); flex: 1; }
+.doc-file-label {
+  display: block; cursor: pointer; font-size: 11px; color: var(--muted);
+  border: 1px dashed var(--border); border-radius: 4px;
+  padding: 6px 10px; text-align: center; transition: border-color .15s, color .15s;
+}
+.doc-file-label:hover { border-color: var(--sigma-red); color: var(--sigma-red); }
+.doc-box input[type=file] { display: none; }
+.doc-file-nome { font-size: 11px; color: #16a34a; font-weight: 600; margin-top: 4px; display: none; }
+.doc-box.has-file .doc-file-nome { display: block; }
+.doc-box.has-file .doc-file-label { display: none; }
+
+.btn-ignorar-doc {
+  margin-top: 6px; font-size: 11px; color: #d97706; background: none;
+  border: 1px solid #d97706; border-radius: 4px; padding: 2px 8px;
+  cursor: pointer; transition: all .15s; display: inline-block;
+}
+.btn-ignorar-doc:hover { background: #fffbeb; }
+.doc-box.has-file .btn-ignorar-doc { display: none; }
+.doc-box.ignorado .btn-ignorar-doc { display: none; }
+
+.ignorado-msg {
+  font-size: 11px; color: #92400e; margin-top: 4px; display: none;
+}
+.doc-box.ignorado .ignorado-msg { display: block; }
+.btn-desfazer-ignorar {
+  background: none; border: none; color: #d97706;
+  font-size: 11px; cursor: pointer; text-decoration: underline; padding: 0;
+}
+
+/* ── Auto-start notice ── */
+.autostart-notice {
+  background: #f0fdf4; border: 1px solid #16a34a; border-radius: var(--radius);
+  padding: 10px 16px; font-size: 13px; color: #14532d; margin-bottom: 14px;
+  font-weight: 600;
+}
+
+/* ── Spinner / Loading ── */
+.spinner-wrap { text-align: center; padding: 48px 20px; }
+.spinner {
+  width: 44px; height: 44px;
+  border: 4px solid var(--border); border-top-color: var(--sigma-red);
+  border-radius: 50%; animation: spin .8s linear infinite; margin: 0 auto 16px;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+.loading-msg { font-size: 14px; color: var(--muted); }
+
+/* ── Parsing spinner pequeno ── */
+.parse-spinner-wrap {
+  display: flex; align-items: center; gap: 12px;
+  background: var(--sigma-light); border: 1px solid #fca5a5;
+  border-radius: var(--radius); padding: 12px 16px; margin-top: 12px;
+  font-size: 13px; color: var(--sigma-red);
+}
+.parse-spinner {
+  width: 18px; height: 18px; flex-shrink: 0;
+  border: 3px solid #fca5a5; border-top-color: var(--sigma-red);
+  border-radius: 50%; animation: spin .8s linear infinite;
+}
+
+/* ── Erro de parse ── */
+.parse-error {
+  background: #fef2f2; border: 1px solid #fca5a5; border-radius: var(--radius);
+  padding: 10px 14px; font-size: 13px; color: #991b1b; margin-top: 10px; display: none;
+}
+
+/* ── Botões da fase 2 ── */
+.fase2-btns {
+  display: flex; gap: 12px; align-items: center; flex-wrap: wrap; margin-top: 20px;
+}
+
+/* ── Relatório ── */
+.relatorio-header {
+  background: var(--sigma-red); color: #fff;
+  padding: 20px 28px; border-radius: var(--radius) var(--radius) 0 0;
+  display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px;
+}
+.relatorio-header h1 { font-size: 17px; font-weight: 700; }
+.relatorio-body {
+  background: var(--white); border: 1px solid var(--border);
+  border-top: none; border-radius: 0 0 var(--radius) var(--radius);
+  padding: 28px; overflow-x: auto;
+}
+.relatorio-body .secao { margin-bottom: 32px; }
+.relatorio-body .sec-titulo {
+  font-size: 15px; font-weight: 700; color: var(--sigma-red);
+  border-bottom: 2px solid var(--sigma-red); padding-bottom: 6px; margin-bottom: 14px;
+}
+.relatorio-body .sec-sub {
+  font-size: 13px; font-weight: 700; color: var(--text); margin: 12px 0 6px;
+}
+.relatorio-body .item {
+  padding: 10px 14px; border-radius: var(--radius);
+  margin-bottom: 8px; font-size: 13px; line-height: 1.6; border-left: 4px solid;
+}
+.relatorio-body .item.ok     { background: #f0fdf4; border-color: #16a34a; color: #14532d; }
+.relatorio-body .item.atencao{ background: #fffbeb; border-color: #d97706; color: #78350f; }
+.relatorio-body .item.erro   { background: #fef2f2; border-color: #dc2626; color: #7f1d1d; }
+.relatorio-body .item.info   { background: #eff6ff; border-color: #2563eb; color: #1e3a5f; }
+.relatorio-body .doc-tag {
+  background: #f1f5f9; color: var(--sigma-red);
+  font-size: 11px; font-weight: 700; padding: 1px 7px;
+  border-radius: 4px; border: 1px solid #e2e8f0;
+}
+.relatorio-body .trecho {
+  font-family: 'Courier New', monospace; background: #f8f8f8;
+  padding: 6px 10px; border-left: 3px solid #cbd5e1;
+  font-size: 12px; color: #475569; margin: 6px 0; border-radius: 0 4px 4px 0;
+}
+.relatorio-body .tabela-cruzamento {
+  width: 100%; border-collapse: collapse;
+  font-size: 12px; margin-top: 8px; table-layout: fixed;
+}
+.relatorio-body .tabela-cruzamento th {
+  background: var(--sigma-red); color: #fff;
+  padding: 8px 10px; text-align: left; font-weight: 600; word-break: break-word;
+}
+.relatorio-body .tabela-cruzamento th:nth-child(1),
+.relatorio-body .tabela-cruzamento td:nth-child(1) { width: 22%; }
+.relatorio-body .tabela-cruzamento th:nth-child(2),
+.relatorio-body .tabela-cruzamento td:nth-child(2) { width: 38%; }
+.relatorio-body .tabela-cruzamento th:nth-child(3),
+.relatorio-body .tabela-cruzamento td:nth-child(3) { width: 22%; }
+.relatorio-body .tabela-cruzamento th:nth-child(4),
+.relatorio-body .tabela-cruzamento td:nth-child(4) { width: 18%; }
+.relatorio-body .tabela-cruzamento td {
+  padding: 8px 10px; border-bottom: 1px solid var(--border);
+  vertical-align: top; word-break: break-word; overflow-wrap: break-word;
+}
+.relatorio-body .tabela-cruzamento tr:nth-child(even) td { background: #fafafa; }
+.relatorio-body .tabela-cruzamento .status-ok   { color: #16a34a; font-weight: 700; white-space: nowrap; }
+.relatorio-body .tabela-cruzamento .status-erro { color: #dc2626; font-weight: 700; white-space: nowrap; }
+.relatorio-body .tabela-cruzamento .status-na   { color: #94a3b8; white-space: nowrap; }
+
+/* ── Legenda ── */
+.legenda-cores {
+  display: flex; flex-wrap: wrap; gap: 16px; align-items: center;
+  background: #f8fafc; border: 1px solid var(--border);
+  border-top: none; padding: 10px 28px; font-size: 12px;
+}
+.legenda-item { display: flex; align-items: center; gap: 6px; color: var(--text); }
+.legenda-cor {
+  width: 14px; height: 14px; border-radius: 3px; border-left: 3px solid; flex-shrink: 0;
+}
+.legenda-cor.ok     { background: #f0fdf4; border-color: #16a34a; }
+.legenda-cor.atencao{ background: #fffbeb; border-color: #d97706; }
+.legenda-cor.erro   { background: #fef2f2; border-color: #dc2626; }
+.legenda-cor.info   { background: #eff6ff; border-color: #2563eb; }
+
+/* ── Botões do header do relatório ── */
+.btn-nova {
+  background: transparent; color: #fff; border: 1px solid rgba(255,255,255,.7);
+  padding: 7px 16px; border-radius: var(--radius);
+  font-size: 13px; font-weight: 600; cursor: pointer; transition: all .15s;
+}
+.btn-nova:hover { background: rgba(255,255,255,.15); }
+
+/* ── Seção de título ── */
+.upload-section-title {
+  font-size: 11px; font-weight: 700; text-transform: uppercase;
+  letter-spacing: 1px; color: var(--muted); margin: 20px 0 10px;
+}
+
+/* ── Erro geral ── */
+#erro-geral {
+  display: none; background: #fef2f2; color: #991b1b;
+  border: 1px solid #fca5a5; border-radius: var(--radius);
+  padding: 14px; font-size: 14px; margin-top: 14px;
+}
+
+/* ── Fase 3: conferência em andamento ── */
+#streaming-container {
+  margin-top: 20px;
+}
+.streaming-label {
+  font-size: 12px; color: var(--muted); margin-bottom: 6px;
+  text-align: center;
+}
+.progress-msg {
+  text-align: center; font-size: 13px; color: var(--sigma-red);
+  font-weight: 600; margin-top: 12px; min-height: 20px;
+}
+.progress-etapa {
+  text-align: center; font-size: 12px; color: var(--muted); margin-top: 4px;
+}
+
+@media (max-width: 700px) {
+  .upload-grid-2 { grid-template-columns: 1fr; }
+  .docs-grid { grid-template-columns: 1fr; }
+  .legenda-cores { gap: 10px; padding: 10px 16px; }
+}
+
+/* ── Impressão ── */
+@media print {
+  @page { size: A4 landscape; margin: 1.5cm 2cm; }
+  /* Remove restrições de altura/overflow do base.html para imprimir conteúdo completo */
+  html, body { height: auto !important; overflow: visible !important; }
+  .main-wrap { height: auto !important; overflow: visible !important; margin-left: 0 !important; }
+  .page-content { height: auto !important; overflow: visible !important; padding: 0 !important; }
+  /* Ocultar UI que não faz parte do relatório */
+  .sidebar, .topbar, #fase-inicial, #fase-parsing, #fase-blocos,
+  #fase-conferindo, .legenda-cores { display: none !important; }
+  #fase-conferindo .spinner-wrap { display: none !important; }
+  #fase-relatorio { display: block !important; }
+  .relatorio-header {
+    background: #A72C31 !important; -webkit-print-color-adjust: exact;
+    print-color-adjust: exact; border-radius: 0 !important; padding: 14px 20px !important;
+  }
+  .btn-nova { display: none !important; }
+  .relatorio-body { padding: 16px 20px !important; border: none !important; border-radius: 0 !important; }
+  .relatorio-body .item {
+    page-break-inside: avoid; -webkit-print-color-adjust: exact; print-color-adjust: exact;
+    margin-bottom: 5px !important;
+  }
+  .relatorio-body .item.ok     { background: #f0fdf4 !important; }
+  .relatorio-body .item.atencao{ background: #fffbeb !important; }
+  .relatorio-body .item.erro   { background: #fef2f2 !important; }
+  .relatorio-body .item.info   { background: #eff6ff !important; }
+  .relatorio-body .secao { page-break-inside: avoid; margin-bottom: 18px !important; }
+  .relatorio-body .sec-titulo { page-break-after: avoid; }
+  .relatorio-body .tabela-cruzamento tr { page-break-inside: avoid; }
+  .relatorio-body .tabela-cruzamento th {
+    background: #A72C31 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact;
+  }
+}
+{% endblock %}
+
+{% block content %}
+
+<!-- ═══ FASE 1: Upload inicial ═══ -->
+<div id="fase-inicial" class="fase ativa">
+  <p style="color:var(--muted); font-size:13px; margin-bottom:20px;">
+    Anexe a minuta do contrato social e, se disponível, a última alteração contratual.
+    Em seguida, escolha manualmente quais estabelecimentos deseja incluir na conferência,
+    adicionando documentos da matriz e/ou das filiais.
+  </p>
+
+  <div class="upload-grid-2">
+
+    <div class="upload-box-inicial" id="box-minuta-inicial">
+      <input type="file" id="file-minuta-inicial" accept=".pdf,.docx,.doc"
+             onchange="onMinutaChange(this)">
+      <div class="upload-label-row">
+        Minuta do Contrato Social
+        <span class="badge-obrig">Obrigatório para leitura</span>
+      </div>
+      <div class="upload-hint">PDF, DOCX ou DOC</div>
+      <div class="file-nome-box" id="nome-minuta-inicial"></div>
+    </div>
+
+    <div class="upload-box-inicial" id="box-ultima-inicial">
+      <input type="file" id="file-ultima-inicial" accept=".pdf,.docx,.doc"
+             onchange="onUltimaChange(this)">
+      <div class="upload-label-row">
+        Última Alteração Contratual
+        <span class="badge-opc" id="badge-ultima">Para comparativo</span>
+      </div>
+      <div class="upload-hint">Necessário para a Etapa 5 (comparativo de quadro societário e dados cadastrais)</div>
+      <div class="file-nome-box" id="nome-ultima-inicial"></div>
+      <div id="ultima-ignorada-msg" style="display:none; font-size:11px; color:#92400e; margin-top:6px;">
+        Ignorada pelo usuário — comparativo não será realizado.
+        <button type="button" style="background:none;border:none;color:#d97706;font-size:11px;cursor:pointer;text-decoration:underline;padding:0;" onclick="desfazerIgnorarUltima()">Desfazer</button>
+      </div>
+    </div>
+
+  </div>
+
+  <div id="parse-spinner" class="parse-spinner-wrap" style="display:none">
+    <div class="parse-spinner"></div>
+    Lendo minuta e extraindo dados do processo...
+  </div>
+
+  <div id="parse-error" class="parse-error"></div>
+
+  <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin-top:12px;">
+    <button class="btn-secondary" id="btn-ler-minuta" onclick="lerMinuta()" disabled>
+      Analisar minuta
+    </button>
+    <button class="btn-secondary" id="btn-ignorar-ultima" type="button"
+            onclick="ignorarUltima()"
+            style="font-size:12px; color:#d97706; border-color:#d97706; display:none;">
+      Ignorar Última Alteração
+    </button>
+  </div>
+
+  <div id="info-processo" class="info-processo-box"></div>
+
+  <!-- Botões manuais para adicionar blocos de estabelecimento -->
+  <div id="add-blocos-bar" style="display:flex; gap:12px; flex-wrap:wrap; margin-bottom:20px; padding:14px 16px; background:#f8fafc; border:1px solid var(--border); border-radius:var(--radius);">
+    <div style="font-size:12px; color:var(--muted); width:100%; margin-bottom:4px; font-weight:600; text-transform:uppercase; letter-spacing:.5px;">
+      Adicionar estabelecimento para conferência:
+    </div>
+    <button id="btn-inserir-matriz" class="btn-secondary" type="button" onclick="inserirMatriz()"
+            style="font-size:13px; display:inline-flex; align-items:center; gap:6px;">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+      Inserir documentos da Matriz
+    </button>
+    <button id="btn-inserir-filial" class="btn-secondary" type="button" onclick="inserirFilial()"
+            style="font-size:13px; display:inline-flex; align-items:center; gap:6px;">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+      Inserir documentos de Filial
+    </button>
+  </div>
+
+  <!-- Mensagem quando nenhum bloco foi adicionado ainda -->
+  <div id="sem-blocos-msg" style="text-align:center; padding:24px; color:var(--muted); font-size:13px; border:1px dashed var(--border); border-radius:var(--radius); margin-bottom:16px;">
+    Nenhum estabelecimento adicionado ainda.<br>
+    <span style="font-size:12px;">Use os botões acima para inserir os documentos da Matriz e/ou das Filiais que fazem parte deste processo.</span>
+  </div>
+
+  <div id="blocos-container"></div>
+
+  <div id="erro-geral"></div>
+
+  <div class="fase2-btns">
+    <button class="btn-primary" id="btn-iniciar" onclick="iniciarConferencia()">
+      Iniciar Conferência
+    </button>
+  </div>
+
+</div>
+
+
+<!-- ═══ FASE 2: Blocos dinâmicos (conteúdo migrado para fase-inicial) ═══ -->
+<div id="fase-blocos" class="fase"></div>
+
+
+<!-- ═══ FASE 3: Conferência em andamento ═══ -->
+<div id="fase-conferindo" class="fase">
+  <div class="spinner-wrap">
+    <div class="spinner"></div>
+    <div class="loading-msg">
+      Conferência em andamento...<br>
+      <span style="font-size:12px;">O relatório aparecerá abaixo quando pronto.</span>
+    </div>
+    <div class="progress-msg" id="progress-msg">Iniciando análise...</div>
+    <div class="progress-etapa" id="progress-etapa"></div>
+  </div>
+  <div id="streaming-container">
+    <div class="streaming-label" id="streaming-label" style="display:none;">Relatório parcial (em geração):</div>
+    <div class="relatorio-body" id="relatorio-streaming" style="border:1px solid var(--border); border-radius: var(--radius); min-height: 80px;"></div>
+  </div>
+</div>
+
+
+<!-- ═══ FASE 4: Relatório final ═══ -->
+<div id="fase-relatorio" class="fase">
+  <div class="relatorio-header">
+    <h1>Relatório de Conferência Documental</h1>
+    <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+      <span style="font-size:12px;opacity:.8" id="data-relatorio"></span>
+      <button class="btn-nova" onclick="window.print()">Imprimir PDF</button>
+      <button class="btn-nova" onclick="novaAnalise()">Nova análise</button>
+    </div>
+  </div>
+  <div class="legenda-cores">
+    <strong style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.8px;margin-right:4px;">Legenda:</strong>
+    <span class="legenda-item"><span class="legenda-cor ok"></span> Conforme</span>
+    <span class="legenda-item"><span class="legenda-cor atencao"></span> Atenção / Ignorado</span>
+    <span class="legenda-item"><span class="legenda-cor erro"></span> Erro / Falha crítica</span>
+    <span class="legenda-item"><span class="legenda-cor info"></span> Informação / Observação</span>
+  </div>
+  <div class="relatorio-body" id="relatorio-final"></div>
+</div>
+
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+// ── Estado global ──────────────────────────────────────────────────────────
+let minutaFile    = null;   // File da fase 1
+let ultimaFile    = null;   // File da fase 1
+let ultimaIgnorada = false; // Usuário optou por ignorar a última alteração
+let minutaAnalise = null;   // Resultado do /analisar-minuta
+let docFiles      = {};     // { "i_tipo": File }
+let docIgnorado   = {};     // { "i_tipo": boolean }
+let docObrigatorio = {};    // { "i_tipo": boolean }
+let autoStartTimer = null;
+// Blocos criados manualmente pelo usuário
+let matrizInserida = false;         // controla visibilidade do btn-inserir-matriz
+let filialCount    = 0;             // contador sequencial de filiais
+let estabelecimentosManual = [];    // array de {tipo, cnpj, nire, alteracoes} criados pelo usuário
+
+const LABEL_ALTERACAO = {
+  quadro_societario: 'Quadro Societário',
+  atividade:         'Atividade/Objeto Social',
+  endereco:          'Endereço',
+  capital:           'Capital Social',
+  nome_empresarial:  'Nome Empresarial',
+  baixa_filial:      'Baixa / Encerramento de Filial',
+  outros:            'Outros',
+};
+
+// ── Fase 1: seleção de arquivos ────────────────────────────────────────────
+function onMinutaChange(input) {
+  const box = document.getElementById('box-minuta-inicial');
+  const nomeEl = document.getElementById('nome-minuta-inicial');
+  if (input.files && input.files[0]) {
+    minutaFile = input.files[0];
+    box.classList.add('has-file');
+    nomeEl.textContent = input.files[0].name;
+    document.getElementById('btn-ler-minuta').disabled = false;
+    document.getElementById('btn-ignorar-ultima').style.display = 'inline-flex';
+    // Auto-ler ao escolher minuta
+    lerMinuta();
+  } else {
+    minutaFile = null;
+    box.classList.remove('has-file');
+    nomeEl.textContent = '';
+    document.getElementById('btn-ler-minuta').disabled = true;
+    document.getElementById('btn-ignorar-ultima').style.display = 'none';
+  }
+}
+
+function onUltimaChange(input) {
+  const box = document.getElementById('box-ultima-inicial');
+  const nomeEl = document.getElementById('nome-ultima-inicial');
+  if (input.files && input.files[0]) {
+    ultimaFile = input.files[0];
+    ultimaIgnorada = false;
+    box.classList.add('has-file');
+    nomeEl.textContent = input.files[0].name;
+    document.getElementById('ultima-ignorada-msg').style.display = 'none';
+    document.getElementById('btn-ignorar-ultima').style.display = 'none';
+    // Re-ler minuta com contexto da última alteração se já tiver minuta
+    if (minutaFile) lerMinuta();
+  } else {
+    ultimaFile = null;
+    box.classList.remove('has-file');
+    nomeEl.textContent = '';
+  }
+}
+
+function ignorarUltima() {
+  ultimaIgnorada = true;
+  ultimaFile = null;
+  const box = document.getElementById('box-ultima-inicial');
+  box.classList.remove('has-file');
+  document.getElementById('nome-ultima-inicial').textContent = '';
+  document.getElementById('file-ultima-inicial').value = '';
+  document.getElementById('ultima-ignorada-msg').style.display = 'block';
+  document.getElementById('btn-ignorar-ultima').style.display = 'none';
+  box.style.borderColor = '#d97706';
+  box.style.background = '#fffbeb';
+}
+
+function desfazerIgnorarUltima() {
+  ultimaIgnorada = false;
+  const box = document.getElementById('box-ultima-inicial');
+  box.style.borderColor = '';
+  box.style.background = '';
+  document.getElementById('ultima-ignorada-msg').style.display = 'none';
+  if (minutaFile) document.getElementById('btn-ignorar-ultima').style.display = 'inline-flex';
+}
+
+// Drag and drop na fase 1
+document.querySelectorAll('.upload-box-inicial').forEach(box => {
+  box.addEventListener('dragover', e => { e.preventDefault(); box.classList.add('dragover'); });
+  box.addEventListener('dragleave', () => box.classList.remove('dragover'));
+  box.addEventListener('drop', e => {
+    e.preventDefault(); box.classList.remove('dragover');
+    const input = box.querySelector('input[type=file]');
+    if (input && e.dataTransfer.files.length) {
+      // Simular seleção pelo DataTransfer
+      const dt = new DataTransfer();
+      dt.items.add(e.dataTransfer.files[0]);
+      input.files = dt.files;
+      input.dispatchEvent(new Event('change'));
+    }
+  });
+});
+
+// ── Ler minuta (POST /conferencia/analisar-minuta) ─────────────────────────
+async function lerMinuta() {
+  if (!minutaFile) return;
+
+  const parseError = document.getElementById('parse-error');
+  parseError.style.display = 'none';
+  document.getElementById('parse-spinner').style.display = 'flex';
+  document.getElementById('btn-ler-minuta').disabled = true;
+
+  const fd = new FormData();
+  fd.append('minuta', minutaFile);
+  if (ultimaFile) fd.append('ultima_alteracao', ultimaFile);
+
+  // AbortController com timeout de 45s
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 45000);
+
+  try {
+    const resp = await fetch('/conferencia/analisar-minuta', {
+      method: 'POST', body: fd, signal: controller.signal,
+    });
+    clearTimeout(timeoutId);
+    const data = await resp.json();
+
+    if (data.erro) {
+      mostrarParseError(data.erro, true);
+      return;
+    }
+
+    minutaAnalise = data;
+    renderFaseBlocos(data);
+
+  } catch (err) {
+    clearTimeout(timeoutId);
+    if (err.name === 'AbortError') {
+      mostrarParseError(
+        'A leitura da minuta demorou mais de 45 segundos e foi interrompida. ' +
+        'Tente novamente ou continue em modo manual.', true
+      );
+    } else {
+      mostrarParseError('Erro de comunicação ao ler a minuta. Verifique sua conexão.', true);
+    }
+  } finally {
+    document.getElementById('parse-spinner').style.display = 'none';
+    document.getElementById('btn-ler-minuta').disabled = !minutaFile;
+  }
+}
+
+function mostrarParseError(msg, comBotoes = false) {
+  const el = document.getElementById('parse-error');
+  let html = `<strong>Atenção:</strong> ${escHtml(msg)}`;
+  if (comBotoes) {
+    html += `<div style="margin-top:10px; display:flex; gap:8px; flex-wrap:wrap;">
+      <button class="btn-secondary" style="font-size:12px;padding:6px 14px;" onclick="lerMinuta()">
+        Tentar novamente
+      </button>
+      <button class="btn-secondary" style="font-size:12px;padding:6px 14px;color:#d97706;border-color:#d97706;" onclick="usarModoManual()">
+        Continuar em modo manual
+      </button>
+    </div>`;
+  }
+  el.innerHTML = html;
+  el.style.display = 'block';
+}
+
+function usarModoManual() {
+  minutaAnalise = {
+    sucesso: true,
+    modo_fallback: true,
+    tipo_processo: 'alteracao_contratual',
+    numero_alteracao: null,
+    cnpj_sociedade: null,
+    razao_social: null,
+    avisos: ['Modo manual ativado — a leitura automática não foi realizada. Use os botões abaixo para inserir os estabelecimentos.'],
+    estabelecimentos_alterados: [],
+  };
+  document.getElementById('parse-error').style.display = 'none';
+  renderFaseBlocos(minutaAnalise);
+}
+
+// ── Fase 2: Renderizar blocos dinâmicos ────────────────────────────────────
+function renderFaseBlocos(analise) {
+  // Limpar estado anterior
+  docFiles = {};
+  docIgnorado = {};
+  docObrigatorio = {};
+  // Resetar blocos manuais
+  matrizInserida = false;
+  filialCount = 0;
+  estabelecimentosManual = [];
+
+  // Info do processo
+  const infoEl = document.getElementById('info-processo');
+  const tipoLabel = {
+    abertura: 'Abertura de Empresa',
+    alteracao_contratual: 'Alteração Contratual',
+    baixa: 'Baixa / Encerramento',
+    transformacao: 'Transformação Societária',
+    alteracao_natureza_juridica: 'Alteração de Natureza Jurídica',
+  };
+  const tipo = tipoLabel[analise.tipo_processo] || analise.tipo_processo || 'Não identificado';
+  const num  = analise.numero_alteracao ? `${analise.numero_alteracao}ª Alteração` : 'Número não identificado';
+  const rs   = analise.razao_social ? `<div class="info-row"><strong>Razão Social:</strong> ${escHtml(analise.razao_social)}</div>` : '';
+  const cnpj = analise.cnpj_sociedade ? `<div class="info-row"><strong>CNPJ:</strong> ${escHtml(analise.cnpj_sociedade)}</div>` : '';
+  const fallback = analise._parser_fallback
+    ? '<div class="info-row" style="color:#d97706;">Aviso: modo manual — a leitura automática não identificou todos os dados.</div>'
+    : '';
+
+  // Avisos da análise
+  const avisos = analise.avisos || [];
+  const avisosHtml = avisos.map(a =>
+    `<div class="info-row" style="color:#d97706; margin-top:4px;">${escHtml(a)}</div>`
+  ).join('');
+
+  infoEl.innerHTML = `
+    ${rs}${cnpj}
+    <div class="info-row"><strong>Tipo de Processo:</strong> ${escHtml(tipo)}</div>
+    <div class="info-row"><strong>Numeração:</strong> ${escHtml(num)}</div>
+    ${fallback}${avisosHtml}
+  `;
+
+  // Limpar container de blocos (sem criação automática)
+  const container = document.getElementById('blocos-container');
+  container.innerHTML = '';
+
+  // Mostrar mensagem "nenhum bloco ainda"
+  document.getElementById('sem-blocos-msg').style.display = 'block';
+
+  // Restaurar botão da matriz (caso tenha sido ocultado em sessão anterior)
+  document.getElementById('btn-inserir-matriz').style.display = 'inline-flex';
+
+  // Permanecer em fase-inicial (blocos e botões já estão na mesma tela)
+}
+
+// ── Inserir bloco de Matriz manualmente ───────────────────────────────────
+function inserirMatriz() {
+  if (matrizInserida) return;
+  const estab = { tipo: 'matriz', cnpj: null, nire: null, alteracoes: ['outros'] };
+  const i = estabelecimentosManual.length;
+  estabelecimentosManual.push(estab);
+
+  const container = document.getElementById('blocos-container');
+  container.insertAdjacentHTML('beforeend', renderBlocoEstabelecimento(estab, i));
+  ativarDragDropDocBoxes();
+  registrarObrigatoriedade(i);
+
+  // Ocultar botão de matriz (apenas um bloco de matriz permitido)
+  document.getElementById('btn-inserir-matriz').style.display = 'none';
+  matrizInserida = true;
+
+  // Ocultar mensagem "nenhum bloco ainda"
+  document.getElementById('sem-blocos-msg').style.display = 'none';
+}
+
+// ── Inserir bloco de Filial manualmente ───────────────────────────────────
+function inserirFilial() {
+  filialCount++;
+  const num = filialCount;
+  const estab = { tipo: 'filial', cnpj: null, nire: null, alteracoes: ['outros'], descricao: `Filial ${num}` };
+  const i = estabelecimentosManual.length;
+  estabelecimentosManual.push(estab);
+
+  const container = document.getElementById('blocos-container');
+  container.insertAdjacentHTML('beforeend', renderBlocoEstabelecimento(estab, i));
+  ativarDragDropDocBoxes();
+  registrarObrigatoriedade(i);
+
+  // Ocultar mensagem "nenhum bloco ainda"
+  document.getElementById('sem-blocos-msg').style.display = 'none';
+}
+
+function registrarObrigatoriedade(i) {
+  // Todos os documentos são opcionais — o usuário decide o que anexar ou ignorar.
+  // O relatório registrará: anexado → conferir; ignorado → registrar como ignorado;
+  // ausente e não ignorado → registrar como ausente/não analisado.
+  docObrigatorio[`${i}_viabilidade`]    = false;
+  docObrigatorio[`${i}_fcpj`]           = false;
+  docObrigatorio[`${i}_dbe`]            = false;
+  docObrigatorio[`${i}_fcn`]            = false;
+  docObrigatorio[`${i}_uso_do_solo`]    = false;
+  docObrigatorio[`${i}_numero_predial`] = false;
+}
+
+function renderBlocoEstabelecimento(estab, i) {
+  const tipo      = estab.tipo || 'matriz';
+  const cnpj      = estab.cnpj || '';
+  const descricao = estab.descricao || '';
+
+  // Título do bloco: MATRIZ ou FILIAL N
+  let tituloBloco;
+  if (tipo === 'matriz') {
+    tituloBloco = 'Matriz';
+  } else {
+    // descricao vem preenchida como "Filial N" ao criar manualmente
+    tituloBloco = descricao || `Filial ${i}`;
+  }
+
+  const docs = [
+    { key: 'viabilidade',    label: 'Consulta Prévia / Viabilidade' },
+    { key: 'fcpj',           label: 'FCPJ (Receita Federal)' },
+    { key: 'dbe',            label: 'DBE (Documento Básico de Entrada)' },
+    { key: 'fcn',            label: 'FCN (Ficha de Cadastro Nacional)' },
+    { key: 'uso_do_solo',    label: 'Uso do Solo' },
+    { key: 'numero_predial', label: 'Número Predial' },
+  ];
+
+  let docsHtml = '';
+  docs.forEach(doc => {
+    const chave = `${i}_${doc.key}`;
+
+    docsHtml += `
+      <div class="doc-box" id="docbox-${chave}" style="border-color:var(--border);">
+        <div class="doc-header">
+          <span class="doc-label">${escHtml(doc.label)}</span>
+        </div>
+        <input type="file" id="file-${chave}" accept=".pdf,.docx,.doc"
+               onchange="onDocChange('${chave}', this)">
+        <label for="file-${chave}" class="doc-file-label" id="filelabel-${chave}">
+          Clique para anexar ou arraste aqui
+        </label>
+        <div class="doc-file-nome" id="filenome-${chave}"></div>
+        <button class="btn-ignorar-doc" id="btn-ignorar-${chave}" type="button"
+                onclick="toggleIgnorar('${chave}')">
+          Ignorar este documento
+        </button>
+        <div class="ignorado-msg" id="ignorado-msg-${chave}">
+          Documento ignorado pelo usuário.
+          <button class="btn-desfazer-ignorar" type="button"
+                  onclick="toggleIgnorar('${chave}')">Desfazer</button>
+        </div>
+      </div>`;
+  });
+
+  return `
+    <div class="bloco-estab" id="bloco-${i}">
+      <div class="bloco-header">
+        <span class="bloco-titulo">${escHtml(tituloBloco)}</span>
+        ${cnpj ? `<span class="bloco-cnpj">CNPJ: ${escHtml(cnpj)}</span>` : ''}
+      </div>
+      <div class="docs-grid">${docsHtml}</div>
+    </div>`;
+}
+
+function ativarDragDropDocBoxes() {
+  document.querySelectorAll('.doc-box').forEach(box => {
+    box.addEventListener('dragover', e => { e.preventDefault(); box.style.opacity = '.7'; });
+    box.addEventListener('dragleave', () => { box.style.opacity = ''; });
+    box.addEventListener('drop', e => {
+      e.preventDefault(); box.style.opacity = '';
+      if (box.classList.contains('ignorado')) return;
+      const input = box.querySelector('input[type=file]');
+      if (input && e.dataTransfer.files.length) {
+        const dt = new DataTransfer();
+        dt.items.add(e.dataTransfer.files[0]);
+        input.files = dt.files;
+        input.dispatchEvent(new Event('change'));
+      }
+    });
+  });
+}
+
+// ── Handlers de upload por doc ─────────────────────────────────────────────
+function onDocChange(chave, input) {
+  const box      = document.getElementById(`docbox-${chave}`);
+  const nomeEl   = document.getElementById(`filenome-${chave}`);
+
+  if (input.files && input.files[0]) {
+    docFiles[chave] = input.files[0];
+    box.classList.add('has-file');
+    // Remove obrigatorio/nao-obrigatorio visual quando preenchido
+    box.classList.remove('nao-obrigatorio');
+    box.style.borderColor = '#16a34a';
+    box.style.background  = '#f0fdf4';
+    nomeEl.textContent = input.files[0].name;
+    // Desmarcar ignorado se tiver
+    if (docIgnorado[chave]) {
+      docIgnorado[chave] = false;
+      box.classList.remove('ignorado');
+    }
+  } else {
+    delete docFiles[chave];
+    box.classList.remove('has-file');
+    restaurarCorBox(chave, box);
+    nomeEl.textContent = '';
+  }
+}
+
+function toggleIgnorar(chave) {
+  const box = document.getElementById(`docbox-${chave}`);
+  const ignoradoEl = document.getElementById(`ignorado-msg-${chave}`);
+
+  if (docIgnorado[chave]) {
+    // Desfazer ignorar
+    docIgnorado[chave] = false;
+    box.classList.remove('ignorado');
+    restaurarCorBox(chave, box);
+  } else {
+    // Ignorar
+    docIgnorado[chave] = true;
+    // Limpar arquivo se tiver
+    if (docFiles[chave]) {
+      const input = document.getElementById(`file-${chave}`);
+      if (input) { input.value = ''; }
+      delete docFiles[chave];
+      box.classList.remove('has-file');
+      const nomeEl = document.getElementById(`filenome-${chave}`);
+      if (nomeEl) nomeEl.textContent = '';
+    }
+    box.classList.add('ignorado');
+    box.style.borderColor = '';
+    box.style.background  = '';
+  }
+}
+
+function restaurarCorBox(chave, box) {
+  if (docIgnorado[chave]) return;
+  box.classList.remove('obrigatorio', 'nao-obrigatorio');
+  box.style.borderColor = 'var(--border)';
+  box.style.background  = '';
+}
+
+// ── Auto-start removido — conferência só inicia pelo botão "Iniciar Conferência" ─
+function verificarAutoStart() { /* no-op */ }
+
+// ── Iniciar conferência (jobs assíncronos + polling) ──────────────────────
+// Solução para timeout do Traefik: o fetch dura < 1s (recebe job_id),
+// depois o frontend faz polling leve a cada 2s até o relatório ficar pronto.
+let _jobIdAtivo = null;
+let _pollingAtivo = false;
+
+async function iniciarConferencia() {
+  clearTimeout(autoStartTimer);
+
+  const erroEl = document.getElementById('erro-geral');
+  erroEl.style.display = 'none';
+
+  if (!minutaAnalise) {
+    erroEl.textContent = 'Leia a minuta primeiro.';
+    erroEl.style.display = 'block';
+    return;
+  }
+
+  // Evitar chamada dupla se já há polling ativo
+  if (_pollingAtivo) return;
+
+  // Montar FormData com todos os documentos
+  // Atualizar a lista de estabelecimentos com os blocos criados manualmente pelo usuário
+  const analiseParaEnvio = Object.assign({}, minutaAnalise, {
+    estabelecimentos_alterados: estabelecimentosManual,
+  });
+  const fd = new FormData();
+  fd.append('estabelecimentos_json', JSON.stringify(analiseParaEnvio));
+  if (minutaFile) fd.append('minuta', minutaFile);
+  if (ultimaFile && !ultimaIgnorada) fd.append('ultima_alteracao', ultimaFile);
+  if (ultimaIgnorada) fd.append('ignorar_ultima', '1');
+
+  // Docs por estabelecimento (somente arquivos anexados; ignorados vão como flag)
+  Object.entries(docFiles).forEach(([chave, file]) => {
+    fd.append(`doc_${chave}`, file);
+  });
+  Object.entries(docIgnorado).forEach(([chave, ignorado]) => {
+    if (ignorado) fd.append(`ignorar_${chave}`, '1');
+  });
+
+  mudarFase('fase-conferindo');
+
+  // Resetar UI da fase de conferência
+  const streamEl    = document.getElementById('relatorio-streaming');
+  const spinnerWrap = document.querySelector('#fase-conferindo .spinner-wrap');
+  const streamingLabel = document.getElementById('streaming-label');
+  streamEl.innerHTML = '';
+  spinnerWrap.style.display = 'block';
+  streamingLabel.style.display = 'none';
+  setProgressMsg('Enviando documentos para análise...');
+  setProgressEtapa('');
+
+  try {
+    // 1. POST — cria o job e recebe job_id (< 1s)
+    const resp = await fetch('/conferencia/analisar', { method: 'POST', body: fd });
+    if (!resp.ok) throw new Error(`Servidor retornou ${resp.status}`);
+
+    const data = await resp.json();
+    if (data.erro) throw new Error(data.erro);
+    if (!data.job_id) throw new Error('Resposta inválida do servidor (sem job_id)');
+
+    _jobIdAtivo = data.job_id;
+
+    // 2. Iniciar polling
+    await pollJob(data.job_id);
+
+  } catch (err) {
+    _pollingAtivo = false;
+    mudarFase('fase-blocos');
+    erroEl.innerHTML = `
+      <strong>Erro durante a conferência:</strong> ${escHtml(err.message)}<br>
+      <button class="btn-secondary" style="margin-top:10px;font-size:12px;padding:6px 14px;"
+              onclick="tentarNovamente()">Tentar novamente</button>`;
+    erroEl.style.display = 'block';
+  }
+}
+
+async function pollJob(jobId) {
+  _pollingAtivo = true;
+
+  const streamEl       = document.getElementById('relatorio-streaming');
+  const spinnerWrap    = document.querySelector('#fase-conferindo .spinner-wrap');
+  const streamingLabel = document.getElementById('streaming-label');
+  const erroEl         = document.getElementById('erro-geral');
+
+  const INTERVALO_MS   = 2000;
+  const MAX_TENTATIVAS = 450; // 15 min (450 × 2s)
+  let tentativa = 0;
+  let errosRede  = 0;
+
+  setProgressMsg('Iniciando conferência comparativa...');
+  setProgressEtapa('Gerando relatório comparativo (sem IA)...');
+
+  while (tentativa < MAX_TENTATIVAS) {
+    await sleep(INTERVALO_MS);
+    tentativa++;
+
+    try {
+      const resp = await fetch(`/conferencia/status/${jobId}`);
+      if (!resp.ok) {
+        errosRede++;
+        if (errosRede > 5) throw new Error('Muitos erros de rede consecutivos durante o polling.');
+        continue;
+      }
+      errosRede = 0;
+
+      const { status, html, msg, erro } = await resp.json();
+
+      // Atualizar mensagem de progresso
+      if (msg) setProgressMsg(msg);
+      if (tentativa < 3) {
+        setProgressEtapa('Lendo documentos e aplicando regras comparativas...');
+      } else if (status === 'running' && html) {
+        setProgressEtapa('Gerando relatório comparativo (processamento em andamento)...');
+      }
+
+      // Mostrar HTML parcial assim que disponível
+      if (html && html !== streamEl.innerHTML) {
+        streamEl.innerHTML = html;
+        if (spinnerWrap.style.display !== 'none') {
+          spinnerWrap.style.display = 'none';
+          streamingLabel.style.display = 'block';
+        }
+      }
+
+      if (status === 'done') {
+        _pollingAtivo = false;
+        finalizarRelatorio(html || streamEl.innerHTML);
+        return;
+      }
+
+      if (status === 'error') {
+        _pollingAtivo = false;
+        mudarFase('fase-blocos');
+        erroEl.innerHTML = `
+          <strong>Erro durante a conferência:</strong> ${escHtml(erro || 'Erro desconhecido.')}<br>
+          <small style="color:var(--muted);">Você pode tentar novamente sem precisar reenviar os arquivos.</small><br>
+          <button class="btn-secondary" style="margin-top:10px;font-size:12px;padding:6px 14px;"
+                  onclick="tentarNovamente()">Tentar novamente</button>`;
+        erroEl.style.display = 'block';
+        return;
+      }
+
+      // status === 'pending' ou 'running': continuar polling
+    } catch (err) {
+      _pollingAtivo = false;
+      mudarFase('fase-blocos');
+      erroEl.innerHTML = `
+        <strong>Erro na comunicação:</strong> ${escHtml(err.message)}<br>
+        <button class="btn-secondary" style="margin-top:10px;font-size:12px;padding:6px 14px;"
+                onclick="tentarNovamente()">Tentar novamente</button>`;
+      erroEl.style.display = 'block';
+      return;
+    }
+  }
+
+  // Timeout do polling
+  _pollingAtivo = false;
+  mudarFase('fase-blocos');
+  erroEl.innerHTML = `
+    <strong>Tempo limite excedido (15 min).</strong> A análise está demorando mais que o esperado.<br>
+    <button class="btn-secondary" style="margin-top:10px;font-size:12px;padding:6px 14px;"
+            onclick="tentarNovamente()">Tentar novamente</button>`;
+  erroEl.style.display = 'block';
+}
+
+function tentarNovamente() {
+  _pollingAtivo = false;
+  _jobIdAtivo   = null;
+  document.getElementById('erro-geral').style.display = 'none';
+  // Botão manual — não duplica job pois _pollingAtivo está false
+  iniciarConferencia();
+}
+
+function setProgressMsg(msg) {
+  const el = document.getElementById('progress-msg');
+  if (el) el.textContent = msg;
+}
+
+function setProgressEtapa(msg) {
+  const el = document.getElementById('progress-etapa');
+  if (el) el.textContent = msg;
+}
+
+function sleep(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+function finalizarRelatorio(html) {
+  document.getElementById('relatorio-final').innerHTML = html;
+  document.getElementById('data-relatorio').textContent =
+    new Date().toLocaleDateString('pt-BR', {
+      day: '2-digit', month: '2-digit', year: 'numeric',
+      hour: '2-digit', minute: '2-digit'
+    });
+  mudarFase('fase-relatorio');
+  document.getElementById('fase-relatorio').scrollIntoView({ behavior: 'smooth' });
+}
+
+// ── Navegação entre fases ──────────────────────────────────────────────────
+function mudarFase(idFase) {
+  document.querySelectorAll('.fase').forEach(f => f.classList.remove('ativa'));
+  document.getElementById(idFase).classList.add('ativa');
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function voltarFaseInicial() {
+  clearTimeout(autoStartTimer);
+  mudarFase('fase-inicial');
+}
+
+function novaAnalise() {
+  minutaFile     = null;
+  ultimaFile     = null;
+  ultimaIgnorada = false;
+  minutaAnalise  = null;
+  docFiles       = {};
+  docIgnorado    = {};
+  docObrigatorio = {};
+  _jobIdAtivo    = null;
+  _pollingAtivo  = false;
+  clearTimeout(autoStartTimer);
+  // Resetar blocos manuais
+  matrizInserida      = false;
+  filialCount         = 0;
+  estabelecimentosManual = [];
+
+  // Resetar fase 1
+  document.getElementById('file-minuta-inicial').value = '';
+  document.getElementById('file-ultima-inicial').value = '';
+  document.getElementById('box-minuta-inicial').classList.remove('has-file');
+  const boxUltima = document.getElementById('box-ultima-inicial');
+  boxUltima.classList.remove('has-file');
+  boxUltima.style.borderColor = '';
+  boxUltima.style.background  = '';
+  document.getElementById('nome-minuta-inicial').textContent = '';
+  document.getElementById('nome-ultima-inicial').textContent = '';
+  document.getElementById('ultima-ignorada-msg').style.display = 'none';
+  document.getElementById('btn-ignorar-ultima').style.display = 'none';
+  document.getElementById('btn-ler-minuta').disabled = true;
+  document.getElementById('parse-error').style.display = 'none';
+  document.getElementById('parse-spinner').style.display = 'none';
+
+  // Resetar relatório
+  document.getElementById('relatorio-final').innerHTML = '';
+  document.getElementById('relatorio-streaming').innerHTML = '';
+
+  // Resetar fase 2 (blocos)
+  document.getElementById('blocos-container').innerHTML = '';
+  const semBlocos = document.getElementById('sem-blocos-msg');
+  if (semBlocos) semBlocos.style.display = 'block';
+  const btnMatriz = document.getElementById('btn-inserir-matriz');
+  if (btnMatriz) btnMatriz.style.display = 'inline-flex';
+
+  mudarFase('fase-inicial');
+}
+
+// ── Utilitários ────────────────────────────────────────────────────────────
+function escHtml(str) {
+  if (!str) return '';
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+</script>
+{% endblock %}

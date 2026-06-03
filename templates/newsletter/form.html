@@ -1,0 +1,324 @@
+{% extends "base.html" %}
+{% block title %}{% if post %}Editar Informativo{% else %}Novo Informativo{% endif %}{% endblock %}
+{% block page_title %}{% if post %}Editar Informativo{% else %}Novo Informativo{% endif %}{% endblock %}
+
+{% block extra_head %}
+<link href="{{ url_for('static', filename='quill/quill.snow.css') }}?v=4" rel="stylesheet">
+{% endblock %}
+
+{% block extra_styles %}
+.form-card {
+  background: #fff; border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 28px; max-width: 800px;
+}
+.form-group { margin-bottom: 20px; }
+.form-group label { display: block; font-size: 13px; font-weight: 600; color: #444; margin-bottom: 6px; }
+.form-group input {
+  width: 100%; padding: 10px 14px; border: 1px solid #ddd;
+  border-radius: 6px; font-size: 14px; font-family: inherit;
+  outline: none; transition: border-color .15s;
+}
+.form-group input:focus { border-color: var(--sigma-red); }
+.checkbox-group { display: flex; align-items: center; gap: 8px; }
+.checkbox-group input[type="checkbox"] { width: auto; }
+
+/* Quill editor */
+#editor-info-wrap { display: none; }
+.ql-toolbar.ql-snow {
+  border: 1px solid #ddd;
+  border-bottom: none;
+  border-radius: 6px 6px 0 0;
+  background: #f9f9f9;
+  flex-wrap: wrap;
+}
+.ql-container.ql-snow {
+  border: 1px solid #ddd;
+  border-radius: 0 0 6px 6px;
+  font-size: 14px;
+  font-family: inherit;
+}
+.ql-editor {
+  min-height: 350px;
+  font-size: 14px;
+  line-height: 1.7;
+}
+.ql-editor hr {
+  border: none;
+  border-top: 2px solid #ddd;
+  margin: 12px 0;
+}
+
+/* Fallback textarea */
+#quill-fallback-info textarea {
+  width: 100%; padding: 10px 14px; border: 1px solid #ddd;
+  border-radius: 6px; font-size: 14px; font-family: inherit; resize: vertical;
+}
+
+/* Emoji picker */
+#emoji-picker-info {
+  display: none;
+  position: absolute;
+  z-index: 9999;
+  background: #fff;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  padding: 10px;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+  width: 280px;
+  max-height: 220px;
+  overflow-y: auto;
+  flex-wrap: wrap;
+}
+#emoji-picker-info.open { display: flex; }
+#emoji-picker-info span {
+  font-size: 20px; cursor: pointer; padding: 3px;
+  border-radius: 4px; line-height: 1.4;
+}
+#emoji-picker-info span:hover { background: #f0f0f0; }
+{% endblock %}
+
+{% block content %}
+{% if erro %}
+<div class="alert alert-error" style="max-width:800px;margin-bottom:16px;">{{ erro }}</div>
+{% endif %}
+
+<div class="form-card" style="position:relative;">
+  <form method="POST" id="form-informativo">
+    <div class="form-group">
+      <label for="titulo">Título *</label>
+      <input type="text" id="titulo" name="titulo" required
+             value="{{ post.titulo if post else '' }}"
+             placeholder="Ex: Novidades do Departamento — Março 2026">
+    </div>
+
+    <div class="form-group" style="position:relative;">
+      <label>Conteúdo *</label>
+
+      <!-- Fallback: visível por padrão; escondido quando Quill inicializa -->
+      <div id="quill-fallback-info">
+        <textarea id="conteudo-fallback-info" rows="14"
+          placeholder="Escreva o conteúdo do informativo aqui...">{{ post.conteudo if post else '' }}</textarea>
+        <small id="quill-fallback-info-msg" style="color:#888;">Carregando editor visual...</small>
+      </div>
+
+      <!-- Editor Quill: escondido por padrão; mostrado após init -->
+      <div id="editor-info-wrap">
+        <div id="editor-informativo"></div>
+        <div id="emoji-picker-info"></div>
+        <input type="file" id="file-anexo-info" accept=".pdf,.docx,.xlsx,.doc,.xls,.pptx,.txt,.zip" style="display:none">
+      </div>
+
+      <input type="hidden" id="conteudo" name="conteudo" value="">
+    </div>
+
+    <div class="form-group">
+      <label class="checkbox-group">
+        <input type="checkbox" name="publicado" value="1"
+               {% if not post or post.publicado %}checked{% endif %}>
+        Publicar imediatamente (visível para todas)
+      </label>
+    </div>
+
+    <div style="display:flex; gap:12px; margin-top:8px;">
+      <button type="submit" class="btn btn-primary">
+        {% if post %}Salvar Alterações{% else %}Publicar Informativo{% endif %}
+      </button>
+      <a href="{{ url_for('newsletter.index') }}" class="btn btn-outline">Cancelar</a>
+    </div>
+  </form>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script src="{{ url_for('static', filename='quill/quill.min.js') }}?v=4"></script>
+<script>
+(function() {
+
+var quill = null;
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+function mostrarFallback(msg) {
+  document.getElementById('quill-fallback-info').style.display = 'block';
+  document.getElementById('editor-info-wrap').style.display = 'none';
+  if (msg) document.getElementById('quill-fallback-info-msg').textContent = msg;
+}
+
+function mostrarEditor() {
+  document.getElementById('quill-fallback-info').style.display = 'none';
+  document.getElementById('editor-info-wrap').style.display = 'block';
+}
+
+// ─── Verificar se Quill carregou ─────────────────────────────────────────────
+if (typeof Quill === 'undefined') {
+  mostrarFallback('Editor visual indisponível. Use o campo de texto acima.');
+  registrarSubmit();
+  return;
+}
+
+// ─── Instanciar Quill ─────────────────────────────────────────────────────────
+try {
+  quill = new Quill('#editor-informativo', {
+    theme: 'snow',
+    placeholder: 'Escreva o conteúdo do informativo aqui...',
+    modules: {
+      toolbar: {
+        container: [
+          [{ 'size': ['small', false, 'large', 'huge'] }],
+          ['bold', 'italic', 'underline', 'strike'],
+          [{ 'color': [] }, { 'background': [] }],
+          [{ 'align': ['', 'center', 'right', 'justify'] }],
+          [{ 'list': 'ordered' }, { 'list': 'bullet' }],
+          [{ 'indent': '-1' }, { 'indent': '+1' }],
+          ['link', 'image'],
+          ['clean']
+        ],
+        handlers: { 'image': imageHandlerInfo }
+      }
+    }
+  });
+} catch(err) {
+  mostrarFallback('Editor visual indisponível. Use o campo de texto acima.');
+  registrarSubmit();
+  return;
+}
+
+// ─── Quill OK: mostrar editor, esconder fallback ───────────────────────────
+mostrarEditor();
+
+// ─── Carregar conteúdo existente ──────────────────────────────────────────────
+var conteudoInicial = {{ (post.conteudo | tojson) if post else 'null' }};
+if (conteudoInicial) {
+  if (conteudoInicial.trim().startsWith('<')) {
+    quill.clipboard.dangerouslyPasteHTML(conteudoInicial);
+  } else {
+    quill.setText(conteudoInicial);
+  }
+}
+
+// ─── Handler de imagem ────────────────────────────────────────────────────────
+function imageHandlerInfo() {
+  var input = document.createElement('input');
+  input.setAttribute('type', 'file');
+  input.setAttribute('accept', 'image/png,image/jpeg,image/gif,image/webp');
+  input.click();
+  input.onchange = function() {
+    var file = input.files[0];
+    if (!file) return;
+    var reader = new FileReader();
+    reader.onload = function(e) {
+      var range = quill.getSelection(true);
+      quill.insertEmbed(range.index, 'image', e.target.result);
+      quill.setSelection(range.index + 1);
+    };
+    reader.readAsDataURL(file);
+  };
+}
+
+// ─── Botões extras na toolbar ─────────────────────────────────────────────────
+var toolbarEl = document.querySelector('.ql-toolbar');
+
+// Botão Emoji
+var grpEmoji = document.createElement('span');
+grpEmoji.className = 'ql-formats';
+grpEmoji.innerHTML = '<button type="button" id="btn-emoji-info" title="Inserir emoji" style="width:auto;padding:0 8px;font-size:14px;">😊</button>';
+toolbarEl.appendChild(grpEmoji);
+
+// Botão Anexar
+var grpAnexo = document.createElement('span');
+grpAnexo.className = 'ql-formats';
+grpAnexo.innerHTML = '<button type="button" title="Anexar documento" style="width:auto;padding:0 8px;font-size:12px;font-weight:600;color:#444;">📎 Anexar</button>';
+toolbarEl.appendChild(grpAnexo);
+grpAnexo.querySelector('button').addEventListener('click', function() {
+  document.getElementById('file-anexo-info').click();
+});
+
+// ─── Emoji picker ─────────────────────────────────────────────────────────────
+var emojis = [
+  '😊','😂','😍','🥰','😎','🤩','🙏','👍','👎','❤️',
+  '🔥','✅','❌','⚠️','📌','📎','📝','📋','📊','📈',
+  '📉','💡','🔑','🔒','🔓','📅','🗓️','⏰','🕐','⌛',
+  '🏢','🏠','📞','📧','💼','👤','👥','🤝','💰','💳',
+  '📜','📄','📃','📑','🗂️','📁','📂','✉️','📬','🖊️',
+  '🖥️','💻','📱','🖨️','⭐','🌟','💫','🎯','🏆','🎖️',
+  '🚀','💎','🌈','☀️','🌙','⚡','🌊','🍀','🌺','🎉',
+  '🎊','👋','🤜','🤛','🙌','💪','🧠','👀','💬','💭'
+];
+var pickerEl = document.getElementById('emoji-picker-info');
+emojis.forEach(function(em) {
+  var sp = document.createElement('span');
+  sp.textContent = em;
+  sp.title = em;
+  sp.addEventListener('click', function() {
+    var range = quill.getSelection(true) || { index: quill.getLength() };
+    quill.insertText(range.index, em, Quill.sources.USER);
+    quill.setSelection(range.index + em.length, Quill.sources.SILENT);
+    pickerEl.classList.remove('open');
+    quill.focus();
+  });
+  pickerEl.appendChild(sp);
+});
+document.getElementById('btn-emoji-info').addEventListener('click', function(e) {
+  e.stopPropagation();
+  var rect = this.getBoundingClientRect();
+  var formRect = document.querySelector('.form-card').getBoundingClientRect();
+  pickerEl.style.top = (rect.bottom - formRect.top + 4) + 'px';
+  pickerEl.style.left = Math.max(0, rect.left - formRect.left - 100) + 'px';
+  pickerEl.classList.toggle('open');
+});
+document.addEventListener('click', function() { pickerEl.classList.remove('open'); });
+
+// ─── Anexar arquivo ───────────────────────────────────────────────────────────
+document.getElementById('file-anexo-info').addEventListener('change', function() {
+  var file = this.files[0];
+  if (!file) return;
+  var reader = new FileReader();
+  reader.onload = function(e) {
+    var range = quill.getSelection(true) || { index: quill.getLength() };
+    quill.insertText(range.index, '📎 ' + file.name, 'link', e.target.result, Quill.sources.USER);
+    quill.insertText(range.index + file.name.length + 2, ' ', Quill.sources.USER);
+    quill.setSelection(range.index + file.name.length + 3, Quill.sources.SILENT);
+    // Adicionar atributo download no link inserido (Chrome bloqueia navegação a data: URLs)
+    var fileName = file.name;
+    setTimeout(function() {
+      quill.root.querySelectorAll('a[href^="data:"]').forEach(function(a) {
+        if (!a.hasAttribute('download')) {
+          a.setAttribute('download', fileName);
+        }
+      });
+    }, 50);
+  };
+  reader.readAsDataURL(file);
+  this.value = '';
+});
+
+// ─── Submit ───────────────────────────────────────────────────────────────────
+registrarSubmit();
+
+function registrarSubmit() {
+  document.getElementById('form-informativo').addEventListener('submit', function(e) {
+    var hiddenInput = document.getElementById('conteudo');
+    if (quill) {
+      // Modo Quill
+      var html = quill.root.innerHTML;
+      if (html === '<p><br></p>' || html.trim() === '') {
+        e.preventDefault();
+        alert('Por favor, adicione conteúdo ao informativo.');
+        return;
+      }
+      hiddenInput.value = html;
+    } else {
+      // Modo fallback
+      var txt = document.getElementById('conteudo-fallback-info').value.trim();
+      if (!txt) {
+        e.preventDefault();
+        alert('Por favor, adicione conteúdo ao informativo.');
+        return;
+      }
+      hiddenInput.value = txt;
+    }
+  });
+}
+
+})(); // IIFE
+</script>
+{% endblock %}

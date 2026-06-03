@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Entrar — Portal Societário Sigma</title>
+  <style>
+    :root { --red: #A72C31; --dark: #7a1f23; }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Segoe UI', Arial, sans-serif;
+      background: #f5f5f5;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .login-wrap {
+      background: #fff;
+      border-radius: 12px;
+      box-shadow: 0 4px 32px rgba(0,0,0,0.10);
+      padding: 48px 40px;
+      width: 100%;
+      max-width: 400px;
+    }
+    .logo-area {
+      text-align: center;
+      margin-bottom: 32px;
+    }
+    .logo-area img {
+      max-width: 120px;
+      margin-bottom: 12px;
+    }
+    .logo-area .brand {
+      font-size: 20px;
+      font-weight: 800;
+      color: var(--red);
+      display: block;
+    }
+    .logo-area .dept {
+      font-size: 13px;
+      color: #666;
+      margin-top: 2px;
+    }
+    h1 {
+      font-size: 22px;
+      font-weight: 700;
+      color: #222;
+      margin-bottom: 6px;
+    }
+    .subtitle { font-size: 14px; color: #666; margin-bottom: 28px; }
+    label {
+      display: block;
+      font-size: 13px;
+      font-weight: 600;
+      color: #444;
+      margin-bottom: 6px;
+    }
+    input[type="email"], input[type="password"] {
+      width: 100%;
+      padding: 11px 14px;
+      border: 1px solid #ddd;
+      border-radius: 8px;
+      font-size: 14px;
+      margin-bottom: 18px;
+      outline: none;
+      transition: border-color .15s;
+    }
+    input:focus { border-color: var(--red); }
+    .btn-login {
+      width: 100%;
+      padding: 13px;
+      background: var(--red);
+      color: #fff;
+      font-size: 15px;
+      font-weight: 700;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: background .15s;
+    }
+    .btn-login:hover { background: var(--dark); }
+    .alert-error {
+      background: #fef2f2;
+      color: #991b1b;
+      border: 1px solid #fca5a5;
+      padding: 10px 14px;
+      border-radius: 8px;
+      font-size: 13px;
+      margin-bottom: 18px;
+    }
+    .footer-note {
+      text-align: center;
+      margin-top: 24px;
+      font-size: 12px;
+      color: #999;
+    }
+  </style>
+</head>
+<body>
+<div class="login-wrap">
+  <div class="logo-area">
+    <img src="{{ url_for('static', filename='sigma_logo.png') }}" alt="Sigma" onerror="this.style.display='none'">
+    <span class="brand">Sigma Contabilidade</span>
+    <span class="dept">Portal Societário</span>
+  </div>
+
+  <h1>Bem-vinda!</h1>
+  <p class="subtitle">Faça login para acessar o portal do departamento.</p>
+
+  {% if erro %}
+  <div class="alert-error">{{ erro }}</div>
+  {% endif %}
+
+  <form method="POST">
+    <label for="email">E-mail</label>
+    <input type="email" id="email" name="email" placeholder="seu@gsigma.com.br"
+           required autocomplete="email">
+
+    <label for="senha">Senha</label>
+    <input type="password" id="senha" name="senha" placeholder="••••••••"
+           required autocomplete="current-password">
+
+    <button type="submit" class="btn-login" id="btnLogin">Entrar no Portal</button>
+  </form>
+
+  <div style="text-align:center; margin-top:18px;">
+    <a href="{{ url_for('auth.esqueceu_senha') }}"
+       style="font-size:13px; color:#A72C31; text-decoration:none;">
+      Esqueceu sua senha?
+    </a>
+  </div>
+
+  <div class="footer-note">Sigma Contabilidade &mdash; Além da Contabilidade</div>
+</div>
+<script>
+  document.querySelector('form').addEventListener('submit', function() {
+    var btn = document.getElementById('btnLogin');
+    btn.disabled = true;
+    btn.textContent = 'Entrando...';
+  });
+</script>
+</body>
+</html>

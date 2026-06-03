@@ -1,0 +1,513 @@
+{% extends "base.html" %}
+{% block title %}Consulta CNAE{% endblock %}
+{% block page_title %}Consulta CNAE / Regime Tributário{% endblock %}
+
+{% block extra_styles %}
+.cnae-layout { display: grid; grid-template-columns: 380px 1fr; gap: 24px; align-items: start; }
+@media (max-width: 900px) { .cnae-layout { grid-template-columns: 1fr; } }
+
+.panel {
+  background: var(--white);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+}
+.panel-head {
+  padding: 16px 20px 12px;
+  border-bottom: 1px solid var(--border);
+  font-size: 13px; font-weight: 700; color: var(--text);
+  display: flex; align-items: center; gap: 8px;
+}
+.panel-body { padding: 18px 20px; }
+
+/* Busca */
+.search-row { display: flex; gap: 8px; }
+.search-row input {
+  flex: 1;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 9px 12px;
+  font-size: 13px;
+  outline: none;
+  transition: border-color .15s;
+}
+.search-row input:focus { border-color: var(--sigma-red); }
+.search-row button { white-space: nowrap; }
+
+/* Lista de sugestões */
+.sugestoes-list { margin-top: 14px; display: flex; flex-direction: column; gap: 6px; }
+.sugestao-item {
+  display: flex; align-items: flex-start; gap: 10px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: border-color .15s, background .15s;
+  font-size: 12px;
+}
+.sugestao-item:hover { background: var(--sigma-light); border-color: var(--sigma-red); }
+.sugestao-item.selecionado { background: var(--sigma-light); border-color: var(--sigma-red); }
+.sugestao-item input[type=checkbox] { margin-top: 2px; accent-color: var(--sigma-red); flex-shrink: 0; }
+.sugestao-code { font-weight: 700; color: var(--sigma-red); font-size: 11px; white-space: nowrap; }
+.sugestao-desc { color: var(--text); line-height: 1.4; }
+.sugestao-sub  { color: var(--muted); font-size: 11px; margin-top: 2px; }
+
+/* Manuais */
+.manual-row { display: flex; gap: 8px; margin-top: 12px; }
+.manual-row input {
+  flex: 1;
+  border: 1px solid var(--border); border-radius: var(--radius-sm);
+  padding: 8px 12px; font-size: 13px; font-family: monospace; outline: none;
+  text-transform: uppercase;
+}
+.manual-row input:focus { border-color: var(--sigma-red); }
+
+/* Tags dos selecionados */
+.tags-wrap { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 12px; min-height: 32px; }
+.tag {
+  display: inline-flex; align-items: center; gap: 4px;
+  background: var(--sigma-light); color: var(--sigma-red);
+  border: 1px solid #f0b0b2; border-radius: 99px;
+  padding: 3px 10px 3px 12px; font-size: 12px; font-weight: 600;
+}
+.tag-rm {
+  cursor: pointer; color: var(--sigma-red); font-size: 15px; line-height: 1;
+  background: none; border: none; padding: 0; margin: 0;
+}
+.tag-rm:hover { color: var(--sigma-dark); }
+
+/* Resultados */
+.resultado-wrap { overflow-x: auto; }
+.resultado-table {
+  width: 100%; border-collapse: collapse; font-size: 12px; min-width: 640px;
+}
+.resultado-table th {
+  background: #f9f1f1; color: var(--sigma-red);
+  font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .4px;
+  padding: 10px 14px; text-align: left; border-bottom: 2px solid #f0b0b2;
+  white-space: nowrap;
+}
+.resultado-table td {
+  padding: 11px 14px; border-bottom: 1px solid var(--border);
+  vertical-align: top; line-height: 1.4;
+}
+.resultado-table tr:last-child td { border-bottom: none; }
+.resultado-table tr:hover td { background: #fdf8f8; }
+
+.badge {
+  display: inline-flex; align-items: center;
+  padding: 2px 8px; border-radius: 99px; font-size: 11px; font-weight: 700;
+}
+.badge-ok   { background: #dcfce7; color: #166534; }
+.badge-warn { background: #fef9c3; color: #854d0e; }
+.badge-err  { background: #fee2e2; color: #991b1b; }
+.badge-neu  { background: #f3f4f6; color: #6b7280; }
+
+.obs-box {
+  margin-top: 6px; padding: 8px 10px;
+  background: #fef9c3; border-left: 3px solid #ca8a04;
+  border-radius: 4px; font-size: 11px; color: #78350f; line-height: 1.5;
+}
+.fatorr-note {
+  margin-top: 6px; font-size: 11px; color: #6b7280; font-style: italic;
+}
+
+/* Estado vazio / loading */
+.estado-vazio {
+  padding: 48px 20px; text-align: center; color: var(--muted); font-size: 13px;
+}
+.estado-vazio svg { width: 40px; height: 40px; margin-bottom: 12px; opacity: .35; }
+
+.spinner {
+  display: inline-block; width: 18px; height: 18px;
+  border: 2px solid rgba(255,255,255,.4); border-top-color: #fff;
+  border-radius: 50%; animation: spin .6s linear infinite; vertical-align: middle;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+{% endblock %}
+
+{% block content %}
+<div style="margin-bottom:20px;">
+  <div style="font-size:13px;color:var(--muted);line-height:1.6;">
+    Busque atividades no IBGE Concla (tabela CNAE-Subclasses 2.3 vigente), selecione os CNAEs e consulte o regime tributário diretamente na Objetiva Edições.
+  </div>
+</div>
+
+<div class="cnae-layout">
+
+  <!-- PAINEL ESQUERDO — busca + seleção -->
+  <div style="display:flex;flex-direction:column;gap:16px;">
+
+    <!-- Busca IBGE -->
+    <div class="panel">
+      <div class="panel-head">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+        Buscar por Atividade (IBGE Concla)
+      </div>
+      <div class="panel-body">
+        <div class="search-row">
+          <input type="text" id="inputBusca" placeholder="Ex: clínica médica, consultoria gestão..." maxlength="120">
+          <button class="btn btn-primary btn-sm" id="btnBuscar">Buscar</button>
+        </div>
+        <div id="sugestoesWrap" style="display:none;">
+          <div style="font-size:11px;color:var(--muted);margin-top:12px;margin-bottom:6px;" id="labelTotal"></div>
+          <div class="sugestoes-list" id="sugestoesList"></div>
+        </div>
+        <div id="msgBusca" style="margin-top:12px;font-size:12px;color:var(--muted);display:none;"></div>
+      </div>
+    </div>
+
+    <!-- Adicionar manualmente -->
+    <div class="panel">
+      <div class="panel-head">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
+        Adicionar CNAE Manualmente
+      </div>
+      <div class="panel-body">
+        <div class="manual-row">
+          <input type="text" id="inputManual" placeholder="Ex: 6920601" maxlength="20">
+          <button class="btn btn-outline btn-sm" id="btnAddManual">Adicionar</button>
+        </div>
+        <div style="font-size:11px;color:var(--muted);margin-top:6px;">Informe o código sem formatação (ex: 6920601) ou com hífens (ex: 6920-6/01)</div>
+      </div>
+    </div>
+
+    <!-- CNAEs selecionados -->
+    <div class="panel">
+      <div class="panel-head">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
+        CNAEs Selecionados
+        <span id="contadorSel" style="margin-left:auto;background:var(--sigma-red);color:#fff;font-size:10px;padding:2px 7px;border-radius:99px;">0</span>
+      </div>
+      <div class="panel-body">
+        <div class="tags-wrap" id="tagsWrap">
+          <div style="font-size:12px;color:var(--muted);">Nenhum CNAE selecionado ainda.</div>
+        </div>
+        <div style="margin-top:16px;">
+          <button class="btn btn-primary" id="btnConsultar" disabled style="width:100%;">
+            Consultar Tributação na Objetiva
+          </button>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- PAINEL DIREITO — resultados -->
+  <div class="panel" id="painelResultados">
+    <div class="panel-head" style="justify-content:space-between;">
+      <span style="display:flex;align-items:center;gap:8px;">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+        Relatório de Regime Tributário
+      </span>
+      <button class="btn btn-outline btn-sm" id="btnCopiar" style="display:none;" onclick="copiarTabela()">Copiar</button>
+    </div>
+    <div class="panel-body" id="resultadosBody">
+      <div class="estado-vazio">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M8 12h8M8 8h8M8 16h4"/></svg>
+        <div>Selecione os CNAEs e clique em<br><strong>Consultar Tributação</strong> para ver o resultado.</div>
+      </div>
+    </div>
+  </div>
+
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+// ── Estado ────────────────────────────────────────────────────────────────────
+const selecionados = new Map(); // codigo → {codigo, descricao}
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
+function formatarCodigo(raw) {
+  // "6920601" → "6920-6/01"
+  const s = raw.replace(/\D/g, '');
+  if (s.length === 7) return `${s.slice(0,4)}-${s.slice(4,5)}/${s.slice(5,7)}`;
+  return raw;
+}
+
+function limparCodigo(raw) {
+  return raw.replace(/[\s\-\/\.]/g, '');
+}
+
+function atualizarTags() {
+  const wrap = document.getElementById('tagsWrap');
+  const cont = document.getElementById('contadorSel');
+  const btn  = document.getElementById('btnConsultar');
+
+  if (selecionados.size === 0) {
+    wrap.innerHTML = '<div style="font-size:12px;color:var(--muted);">Nenhum CNAE selecionado ainda.</div>';
+    btn.disabled = true;
+    cont.textContent = '0';
+    return;
+  }
+
+  wrap.innerHTML = '';
+  selecionados.forEach((info, cod) => {
+    const tag = document.createElement('span');
+    tag.className = 'tag';
+    tag.innerHTML = `${formatarCodigo(cod)}<button class="tag-rm" title="Remover" onclick="removerCnae('${cod}')">&times;</button>`;
+    wrap.appendChild(tag);
+  });
+
+  btn.disabled = false;
+  cont.textContent = selecionados.size;
+}
+
+function adicionarCnae(codigo, descricao) {
+  const c = limparCodigo(codigo);
+  if (!c) return;
+  selecionados.set(c, { codigo: c, descricao: descricao || formatarCodigo(c) });
+  atualizarTags();
+}
+
+function removerCnae(codigo) {
+  selecionados.delete(codigo);
+  // Desmarcar checkbox se existir
+  const cb = document.getElementById(`cb_${codigo}`);
+  if (cb) {
+    cb.checked = false;
+    cb.closest('.sugestao-item').classList.remove('selecionado');
+  }
+  atualizarTags();
+}
+
+// ── Busca IBGE ────────────────────────────────────────────────────────────────
+async function buscarIbge() {
+  const query = document.getElementById('inputBusca').value.trim();
+  if (query.length < 3) {
+    mostrarMsg('Digite pelo menos 3 caracteres.'); return;
+  }
+
+  const btn = document.getElementById('btnBuscar');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span>';
+  document.getElementById('sugestoesWrap').style.display = 'none';
+  document.getElementById('msgBusca').style.display = 'none';
+
+  try {
+    const r = await fetch('/cnae/api/buscar-ibge', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ query })
+    });
+    const data = await r.json();
+
+    if (data.erro) { mostrarMsg(data.erro); return; }
+    if (!data.resultados || data.resultados.length === 0) {
+      mostrarMsg('Nenhum CNAE encontrado para essa descrição. Tente outros termos.'); return;
+    }
+
+    renderSugestoes(data.resultados);
+  } catch (e) {
+    mostrarMsg('Erro na busca. Verifique a conexão.');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Buscar';
+  }
+}
+
+function renderSugestoes(resultados) {
+  const lista = document.getElementById('sugestoesList');
+  const wrap  = document.getElementById('sugestoesWrap');
+  const label = document.getElementById('labelTotal');
+
+  label.textContent = `${resultados.length} resultado${resultados.length !== 1 ? 's' : ''} encontrado${resultados.length !== 1 ? 's' : ''}`;
+  lista.innerHTML = '';
+
+  resultados.forEach(s => {
+    const cod = limparCodigo(s.id);
+    const checked = selecionados.has(cod) ? 'checked' : '';
+    const selClass = selecionados.has(cod) ? 'selecionado' : '';
+
+    const item = document.createElement('label');
+    item.className = `sugestao-item ${selClass}`;
+    item.innerHTML = `
+      <input type="checkbox" id="cb_${cod}" ${checked} onchange="toggleSugestao('${cod}', '${escapar(s.descricao)}', this)">
+      <div>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <span class="sugestao-code">${formatarCodigo(s.id)}</span>
+          <span class="sugestao-desc">${s.descricao}</span>
+        </div>
+        <div class="sugestao-sub">${s.secao} — ${s.divisao_desc || s.secao_desc}</div>
+      </div>`;
+    lista.appendChild(item);
+  });
+
+  wrap.style.display = 'block';
+}
+
+function toggleSugestao(cod, desc, cb) {
+  const item = cb.closest('.sugestao-item');
+  if (cb.checked) {
+    adicionarCnae(cod, desc);
+    item.classList.add('selecionado');
+  } else {
+    removerCnae(cod);
+    item.classList.remove('selecionado');
+  }
+}
+
+function mostrarMsg(txt) {
+  const el = document.getElementById('msgBusca');
+  el.textContent = txt;
+  el.style.display = 'block';
+}
+
+function escapar(s) {
+  return (s || '').replace(/'/g, "\\'").replace(/"/g, '&quot;');
+}
+
+// ── Adicionar manual ──────────────────────────────────────────────────────────
+document.getElementById('btnAddManual').addEventListener('click', () => {
+  const val = document.getElementById('inputManual').value.trim();
+  if (!val) return;
+  adicionarCnae(val, '');
+  document.getElementById('inputManual').value = '';
+});
+document.getElementById('inputManual').addEventListener('keydown', e => {
+  if (e.key === 'Enter') document.getElementById('btnAddManual').click();
+});
+
+// ── Busca: Enter key ──────────────────────────────────────────────────────────
+document.getElementById('inputBusca').addEventListener('keydown', e => {
+  if (e.key === 'Enter') buscarIbge();
+});
+document.getElementById('btnBuscar').addEventListener('click', buscarIbge);
+
+// ── Consultar Objetiva ────────────────────────────────────────────────────────
+document.getElementById('btnConsultar').addEventListener('click', async () => {
+  if (selecionados.size === 0) return;
+
+  const btn = document.getElementById('btnConsultar');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span> Consultando Objetiva...';
+
+  const corpo = document.getElementById('resultadosBody');
+  corpo.innerHTML = '<div class="estado-vazio"><div>Consultando Objetiva Edições...</div></div>';
+  document.getElementById('btnCopiar').style.display = 'none';
+
+  const codigos = Array.from(selecionados.keys());
+
+  try {
+    const r = await fetch('/cnae/api/consultar-objetiva', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ codigos })
+    });
+    const data = await r.json();
+
+    if (data.erro) {
+      corpo.innerHTML = `<div class="estado-vazio"><div style="color:#991b1b;">${data.erro}</div></div>`;
+      return;
+    }
+
+    renderResultados(data.resultados);
+    document.getElementById('btnCopiar').style.display = '';
+  } catch (e) {
+    corpo.innerHTML = `<div class="estado-vazio"><div style="color:#991b1b;">Erro na consulta. Tente novamente.</div></div>`;
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = 'Consultar Tributação na Objetiva';
+    atualizarTags();
+  }
+});
+
+// ── Renderizar tabela de resultados ───────────────────────────────────────────
+function renderResultados(resultados) {
+  const corpo = document.getElementById('resultadosBody');
+
+  let html = `
+    <div class="resultado-wrap">
+    <table class="resultado-table" id="tabelaResultado">
+      <thead>
+        <tr>
+          <th>CNAE</th>
+          <th>Descrição</th>
+          <th>MEI</th>
+          <th>Simples Nacional</th>
+          <th>Anexo</th>
+          <th>Lucro Presumido</th>
+        </tr>
+      </thead>
+      <tbody>`;
+
+  resultados.forEach(r => {
+    if (r.erro) {
+      html += `<tr>
+        <td><code style="font-size:11px;">${formatarCodigo(r.codigo)}</code></td>
+        <td colspan="5" style="color:#991b1b;font-size:12px;">${r.erro}</td>
+      </tr>`;
+      return;
+    }
+
+    const badgeSimples = {
+      'ok':   `<span class="badge badge-ok">Não impeditivo</span>`,
+      'warn': `<span class="badge badge-warn">Condicional</span>`,
+      'err':  `<span class="badge badge-err">Impeditivo</span>`,
+      '':     `<span class="badge badge-neu">—</span>`,
+    }[r.simples_status] || `<span class="badge badge-neu">${r.simples}</span>`;
+
+    const badgeMei = r.mei === 'Não permitido'
+      ? `<span class="badge badge-neu">Não permitido</span>`
+      : r.mei.startsWith('Permitido')
+        ? `<span class="badge badge-ok">${r.mei}</span>`
+        : `<span class="badge badge-neu">${r.mei}</span>`;
+
+    const anexoTxt = r.fator_r
+      ? `${r.anexo} <div class="fatorr-note">Depende do fator "r" (folha/faturamento). &ge;28% = Anexo III; &lt;28% = Anexo V</div>`
+      : r.anexo;
+
+    const lpTxt = r.lucro_presumido === 'Permitido'
+      ? `Permitido<div style="font-size:11px;color:var(--muted);margin-top:3px;">IRPJ presunção ${r.irpj_presuncao} | CSLL presunção ${r.csll_presuncao}</div>`
+      : r.lucro_presumido;
+
+    const obsBox = r.simples_obs
+      ? `<div class="obs-box">${r.simples_obs}</div>`
+      : '';
+
+    html += `<tr>
+      <td style="font-weight:700;color:var(--sigma-red);font-size:12px;white-space:nowrap;">
+        ${formatarCodigo(r.codigo)}
+      </td>
+      <td>
+        <div style="font-weight:600;">${r.descricao || r.codigo}</div>
+        ${r.secao ? `<div style="font-size:11px;color:var(--muted);margin-top:2px;">Seção ${r.secao}</div>` : ''}
+      </td>
+      <td>${badgeMei}</td>
+      <td>${badgeSimples}${obsBox}
+        ${r.fundamento && r.fundamento !== '—' ? `<div style="font-size:10px;color:var(--muted);margin-top:4px;">${r.fundamento}</div>` : ''}
+      </td>
+      <td style="white-space:nowrap;">${anexoTxt}</td>
+      <td>${lpTxt}</td>
+    </tr>`;
+  });
+
+  html += '</tbody></table></div>';
+  corpo.innerHTML = html;
+}
+
+// ── Copiar tabela ─────────────────────────────────────────────────────────────
+function copiarTabela() {
+  const tabela = document.getElementById('tabelaResultado');
+  if (!tabela) return;
+
+  // Montar texto formatado
+  let linhas = [];
+  const headers = Array.from(tabela.querySelectorAll('th')).map(th => th.textContent.trim());
+  linhas.push(headers.join('\t'));
+
+  tabela.querySelectorAll('tbody tr').forEach(tr => {
+    const cells = Array.from(tr.querySelectorAll('td')).map(td => td.innerText.replace(/\n+/g, ' ').trim());
+    linhas.push(cells.join('\t'));
+  });
+
+  navigator.clipboard.writeText(linhas.join('\n')).then(() => {
+    const btn = document.getElementById('btnCopiar');
+    const orig = btn.textContent;
+    btn.textContent = 'Copiado!';
+    setTimeout(() => btn.textContent = orig, 2000);
+  });
+}
+</script>
+{% endblock %}

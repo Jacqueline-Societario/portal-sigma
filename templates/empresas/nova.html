@@ -1,0 +1,209 @@
+{% extends "base.html" %}
+{% block title %}Nova Empresa{% endblock %}
+{% block page_title %}Nova Empresa{% endblock %}
+
+{% block extra_styles %}
+.form-card {
+  background: #fff; border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 28px; max-width: 860px;
+}
+.form-grid {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px;
+}
+.form-grid.full { grid-template-columns: 1fr; }
+.form-group { margin-bottom: 0; }
+.form-group label {
+  display: block; font-size: 12px; font-weight: 700;
+  text-transform: uppercase; letter-spacing: .4px;
+  color: var(--muted); margin-bottom: 5px;
+}
+.form-group input,
+.form-group select {
+  width: 100%; padding: 9px 12px; border: 1px solid #ddd;
+  border-radius: 6px; font-size: 13px; font-family: inherit;
+  outline: none; transition: border-color .15s; color: var(--text);
+}
+.form-group input:focus,
+.form-group select:focus { border-color: var(--sigma-red); }
+.section-title {
+  font-size: 13px; font-weight: 700; color: var(--sigma-red);
+  border-bottom: 1px solid var(--border); padding-bottom: 8px;
+  margin: 24px 0 16px;
+}
+.campo-info-icon {
+  width: 13px; height: 13px; vertical-align: middle;
+  margin-left: 4px; color: var(--muted); cursor: help;
+  opacity: .65; display: inline;
+}
+.campo-manual-link {
+  display: inline-flex; align-items: center; gap: 4px;
+  font-size: 12px; color: var(--sigma-red); text-decoration: none;
+  margin-bottom: 10px;
+}
+.campo-manual-link:hover { text-decoration: underline; }
+{% endblock %}
+
+{% block content %}
+{% if erro %}
+<div class="alert alert-error" style="max-width:860px;margin-bottom:16px;">{{ erro }}</div>
+{% endif %}
+
+<div style="margin-bottom:16px;">
+  <a href="{{ url_for('empresas.index') }}" class="btn btn-outline btn-sm">← Voltar</a>
+</div>
+
+<div class="form-card">
+  <form method="POST" id="form-nova-empresa">
+
+    <div style="margin-bottom:12px;">
+      <a href="https://societario.gsigma.com.br/manuais/13" target="_blank" class="campo-manual-link">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+        Consultar padrão de preenchimento
+      </a>
+    </div>
+
+    <div class="section-title">Identificação</div>
+    <div class="form-grid">
+      <div class="form-group" style="grid-column:1/-1;">
+        <label>Nome da Empresa *
+          <span title="Preencher exatamente conforme a razão social cadastrada no Domínio."><svg class="campo-info-icon" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"/></svg></span>
+        </label>
+        <input type="text" name="nome_empresa" required
+               placeholder="Ex.: ABREU E TAVARES DE SA LTDA" value="{{ dados.nome_empresa if dados else '' }}">
+      </div>
+      <div class="form-group">
+        <label>CNPJ / CPF
+          <span title="Usar CNPJ/CPF com pontuação."><svg class="campo-info-icon" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"/></svg></span>
+        </label>
+        <input type="text" name="cnpj_cpf"
+               placeholder="Ex.: 03.370.356/0001-05" value="{{ dados.cnpj_cpf if dados else '' }}">
+      </div>
+      <div class="form-group">
+        <label>Código Domínio
+          <span title="Preencher somente o número do código no Domínio."><svg class="campo-info-icon" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"/></svg></span>
+        </label>
+        <input type="text" name="codigo_dominio"
+               placeholder="Ex.: 869" value="{{ dados.codigo_dominio if dados else '' }}">
+      </div>
+      <div class="form-group">
+        <label>Situação (aba)</label>
+        <select name="aba">
+          <option value="ATIVAS" {% if not dados or dados.aba == 'ATIVAS' %}selected{% endif %}>Ativa</option>
+          <option value="INATIVAS" {% if dados and dados.aba == 'INATIVAS' %}selected{% endif %}>Inativa</option>
+          <option value="NÃO MENSAIS" {% if dados and dados.aba == 'NÃO MENSAIS' %}selected{% endif %}>Avulso</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Município
+          <span title="Preencher em letras maiúsculas, com acento."><svg class="campo-info-icon" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"/></svg></span>
+        </label>
+        <input type="text" name="municipio"
+               placeholder="Ex.: GOIÂNIA" value="{{ dados.municipio if dados else '' }}">
+      </div>
+      <div class="form-group">
+        <label>Atuação
+          <span title="Usar No local, Endereço fiscal, Ponto de referência ou Não atua no local."><svg class="campo-info-icon" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"/></svg></span>
+        </label>
+        <input type="text" name="atuacao"
+               placeholder="Ex.: No local" value="{{ dados.atuacao if dados else '' }}">
+      </div>
+      <div class="form-group">
+        <label>Escritório
+          <span title="Usar o nome padronizado da carteira/escritório de origem."><svg class="campo-info-icon" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"/></svg></span>
+        </label>
+        <input type="text" name="escritorio"
+               placeholder="Ex.: SIGMA" value="{{ dados.escritorio if dados else '' }}">
+      </div>
+    </div>
+
+    <div class="section-title">Documentos e Licenças</div>
+    <div class="form-grid">
+      <div class="form-group">
+        <label>Alvará de Funcionamento
+          <span title="Use data, Em andamento, Não possui, Não se aplica, Isento ou Revisar cadastro. Não usar: Em dia, OK, Vigente, Pendente."><svg class="campo-info-icon" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"/></svg></span>
+        </label>
+        <input type="text" name="alvara_funcionamento"
+               placeholder="Ex.: 15/08/2026 ou Em andamento" value="{{ dados.alvara_funcionamento if dados else '' }}">
+      </div>
+      <div class="form-group">
+        <label>VISA
+          <span title="Use data, Em andamento, Não possui, Não se aplica, Isento ou Revisar cadastro. Não usar: Em dia, OK, Vigente, Pendente."><svg class="campo-info-icon" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"/></svg></span>
+        </label>
+        <input type="text" name="visa"
+               placeholder="Ex.: 31/12/2026 ou Isento" value="{{ dados.visa if dados else '' }}">
+      </div>
+      <div class="form-group">
+        <label>CNES
+          <span title="Use número do CNES, Em andamento, Não se aplica, Irregular ou deixe em branco."><svg class="campo-info-icon" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"/></svg></span>
+        </label>
+        <input type="text" name="cnes"
+               placeholder="Ex.: 1234567 ou Não se aplica" value="{{ dados.cnes if dados else '' }}">
+      </div>
+      <div class="form-group">
+        <label>Bombeiro — Vencimento
+          <span title="Use data, Em andamento, Não possui, Não se aplica, Isento, Válido indeterminado ou Revisar cadastro."><svg class="campo-info-icon" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"/></svg></span>
+        </label>
+        <input type="text" name="venc_bombeiro"
+               placeholder="Ex.: 07/03/2026 ou Em andamento" value="{{ dados.venc_bombeiro if dados else '' }}">
+      </div>
+      <div class="form-group">
+        <label>Bombeiro — Protocolo
+          <span title="Preencher somente o número do protocolo. Se isento ou dispensado, usar Isento. Se não houver protocolo, deixar em branco. Não usar: Em andamento, Aguardando, Processo aberto."><svg class="campo-info-icon" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"/></svg></span>
+        </label>
+        <input type="text" name="prot_bombeiro"
+               placeholder="Ex.: 8524/25" value="{{ dados.prot_bombeiro if dados else '' }}">
+      </div>
+      <div class="form-group">
+        <label>Licença Ambiental
+          <span title="Use data, Em andamento, Não possui, Não se aplica, Isento ou Revisar cadastro. Não usar: Vigente, OK, Pendente."><svg class="campo-info-icon" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 00-1-1H9z" clip-rule="evenodd"/></svg></span>
+        </label>
+        <input type="text" name="licenca_ambiental"
+               placeholder="Ex.: 15/08/2026 ou Isento" value="{{ dados.licenca_ambiental if dados else '' }}">
+      </div>
+      <div class="form-group">
+        <label>Publicidade
+          <span title="Use data, Em andamento, Não possui, Não se aplica, Isento, Irregular ou Revisar cadastro. Não usar: OK, Pendente, Em dia, Vigente."><svg class="campo-info-icon" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"/></svg></span>
+        </label>
+        <input type="text" name="publicidade"
+               placeholder="Ex.: 15/08/2026 ou Não possui" value="{{ dados.publicidade if dados else '' }}">
+      </div>
+      <div class="form-group">
+        <label>TPI
+          <span title="Use Pagante, Isento, Não se aplica ou deixe em branco. Não usar valor em R$, vencimento, protocolo ou Em andamento."><svg class="campo-info-icon" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"/></svg></span>
+        </label>
+        <input type="text" name="tpi"
+               placeholder="Ex.: Pagante ou Isento" value="{{ dados.tpi if dados else '' }}">
+      </div>
+    </div>
+
+    <div class="section-title">Representação da Empresa</div>
+    <div class="form-grid">
+      <div class="form-group">
+        <label>Procuração
+          <span title="Use Assinada eletronicamente, Assinada cartório, Em andamento, Cliente não enviou ou Não possui."><svg class="campo-info-icon" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"/></svg></span>
+        </label>
+        <input type="text" name="procuracao"
+               placeholder="Ex.: Assinada cartório"
+               value="{{ dados.procuracao if dados else '' }}">
+      </div>
+      <div class="form-group">
+        <label>Certificado Digital
+          <span title="Use A1 - data, A3 - data, Em andamento, Não possui ou Cliente não enviou. Não usar: A1 válido até 12/2025, OK, tem certificado."><svg class="campo-info-icon" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"/></svg></span>
+        </label>
+        <input type="text" name="certificado_digital"
+               placeholder="Ex.: A1 - 15/12/2025" value="{{ dados.certificado_digital if dados else '' }}">
+      </div>
+      <div class="form-group">
+        <label>Motivo (se inativa)</label>
+        <input type="text" name="motivo_inativa"
+               placeholder="Descreva o motivo se a empresa está inativa" value="{{ dados.motivo_inativa if dados else '' }}">
+      </div>
+    </div>
+
+    <div style="display:flex; gap:12px; margin-top:24px;">
+      <button type="submit" class="btn btn-primary">Salvar Empresa</button>
+      <a href="{{ url_for('empresas.index') }}" class="btn btn-outline">Cancelar</a>
+    </div>
+  </form>
+</div>
+{% endblock %}

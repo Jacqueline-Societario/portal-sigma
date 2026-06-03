@@ -1,0 +1,109 @@
+# Portal Societario — .gitignore
+# Criado em: 02/06/2026
+# Finalidade: proteger arquivos sensiveis, gerados e locais
+#              antes de qualquer alinhamento WSL x VPS
+
+# -------------------------------------------------------
+# Credenciais e configuracoes de ambiente
+# -------------------------------------------------------
+.env
+.env.*
+*.env
+# Excecao: arquivo de exemplo sanitizado (sem credenciais reais)
+!.env.example
+
+# -------------------------------------------------------
+# Bancos de dados
+# -------------------------------------------------------
+*.db
+*.sqlite
+*.sqlite3
+portal.db
+
+# -------------------------------------------------------
+# Ambiente virtual Python
+# -------------------------------------------------------
+.venv/
+venv/
+env/
+ENV/
+
+# -------------------------------------------------------
+# Cache Python
+# -------------------------------------------------------
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+
+# -------------------------------------------------------
+# Uploads de usuarios
+# -------------------------------------------------------
+uploads/
+
+# -------------------------------------------------------
+# Logs
+# -------------------------------------------------------
+logs/
+*.log
+backup.log
+
+# -------------------------------------------------------
+# Backups
+# -------------------------------------------------------
+backups/
+backup*.csv
+backup_consolidada*.csv
+*.bak
+*.bak_*
+*.tmp
+
+# -------------------------------------------------------
+# Credenciais e chaves
+# -------------------------------------------------------
+credentials/
+tokens/
+*.key
+*.pem
+*.crt
+*.p12
+*.pfx
+token*.json
+
+# -------------------------------------------------------
+# Dados gerados (CNAE e outros)
+# -------------------------------------------------------
+static/data/
+
+# -------------------------------------------------------
+# Planilhas e relatorios gerados
+# -------------------------------------------------------
+*.xlsx
+*.xls
+SNAPSHOT_*.xlsx
+relatorio_*.xlsx
+
+# -------------------------------------------------------
+# Sistema operacional
+# -------------------------------------------------------
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# -------------------------------------------------------
+# IDEs e editores
+# -------------------------------------------------------
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# -------------------------------------------------------
+# Estado operacional (arquivos de estado mutavel)
+# -------------------------------------------------------
+# backup_config.json contem ID de planilha de producao e
+# campos atualizados a cada backup (ultimo_backup, status, total).
+# Nao versionar o estado real -- usar backup_config.example.json
+# como referencia de estrutura.
+backup_config.json

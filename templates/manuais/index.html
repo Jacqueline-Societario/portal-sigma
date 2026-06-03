@@ -1,0 +1,115 @@
+{% extends "base.html" %}
+{% block title %}Manuais e Conhecimentos{% endblock %}
+{% block page_title %}Manuais e Conhecimentos{% endblock %}
+
+{% block extra_styles %}
+.top-bar {
+  display: flex; justify-content: space-between; align-items: flex-start;
+  margin-bottom: 20px; gap: 12px; flex-wrap: wrap;
+}
+.search-bar {
+  display: flex; gap: 8px; flex: 1; min-width: 220px;
+}
+.search-bar input {
+  flex: 1; padding: 9px 14px; border: 1px solid var(--border);
+  border-radius: var(--radius); font-size: 14px; font-family: inherit;
+  outline: none; transition: border-color .15s;
+}
+.search-bar input:focus { border-color: var(--sigma-red); }
+.search-bar button { padding: 9px 18px; }
+.search-info {
+  font-size: 13px; color: var(--muted); margin-bottom: 16px;
+}
+.search-info a { color: var(--sigma-red); text-decoration: none; }
+.search-info a:hover { text-decoration: underline; }
+.cat-section { margin-bottom: 32px; }
+.cat-title {
+  font-size: 13px; font-weight: 700; text-transform: uppercase;
+  letter-spacing: 1px; color: var(--sigma-red);
+  border-bottom: 2px solid var(--sigma-red);
+  padding-bottom: 6px; margin-bottom: 14px;
+}
+.manual-list { display: grid; gap: 10px; }
+.manual-item {
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 16px 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  text-decoration: none;
+  color: var(--text);
+  transition: box-shadow .15s;
+}
+.manual-item:hover { box-shadow: 0 2px 12px rgba(0,0,0,0.07); }
+.manual-item-title { font-weight: 600; font-size: 14px; }
+.manual-item-meta { font-size: 12px; color: var(--muted); margin-top: 2px; }
+.manual-item-arrow { color: var(--sigma-red); font-size: 18px; }
+.empty-state {
+  text-align: center; padding: 48px; background: #fff;
+  border: 1px solid var(--border); border-radius: var(--radius);
+}
+.empty-state p { color: var(--muted); font-size: 14px; margin-bottom: 16px; }
+{% endblock %}
+
+{% block content %}
+<div class="top-bar">
+  <form method="GET" action="{{ url_for('manuais.index') }}" class="search-bar">
+    <input type="text" name="search" value="{{ search or '' }}"
+           placeholder="Pesquisar por título ou conteúdo..."
+           autocomplete="off">
+    <button type="submit" class="btn btn-outline">Buscar</button>
+    {% if search %}
+    <a href="{{ url_for('manuais.index') }}" class="btn btn-outline" style="white-space:nowrap;">Limpar</a>
+    {% endif %}
+  </form>
+  <a href="{{ url_for('manuais.novo') }}" class="btn btn-primary" style="white-space:nowrap;">
+    + Novo Manual
+  </a>
+</div>
+
+{% if search %}
+<p class="search-info">
+  {% set ns = namespace(total=0) %}
+  {% for items in agrupados.values() %}{% set ns.total = ns.total + (items | length) %}{% endfor %}
+  {% if agrupados %}
+    {{ ns.total }} resultado{{ 's' if ns.total != 1 else '' }} para
+    <strong>"{{ search }}"</strong> —
+  {% endif %}
+  <a href="{{ url_for('manuais.index') }}">Ver todos</a>
+</p>
+{% endif %}
+
+{% if agrupados %}
+  {% for categoria, manuais in agrupados.items() %}
+  <div class="cat-section">
+    <div class="cat-title">{{ categoria }}</div>
+    <div class="manual-list">
+      {% for m in manuais %}
+      <a href="{{ url_for('manuais.ver', manual_id=m.id) }}" class="manual-item">
+        <div>
+          <div class="manual-item-title">{{ m.titulo }}</div>
+          <div class="manual-item-meta">
+            Atualizado {{ m.atualizado_em[:10] }}
+            {% if m.autor %}&bull; {{ m.autor }}{% endif %}
+          </div>
+        </div>
+        <span class="manual-item-arrow">&#8250;</span>
+      </a>
+      {% endfor %}
+    </div>
+  </div>
+  {% endfor %}
+{% else %}
+<div class="empty-state">
+  {% if search %}
+  <p>Nenhum manual encontrado para "<strong>{{ search }}</strong>".<br>
+     Tente outra palavra ou <a href="{{ url_for('manuais.index') }}" style="color:var(--sigma-red)">veja todos</a>.</p>
+  {% else %}
+  <p>Nenhum manual cadastrado ainda.</p>
+  <a href="{{ url_for('manuais.novo') }}" class="btn btn-primary">Criar primeiro manual</a>
+  {% endif %}
+</div>
+{% endif %}
+{% endblock %}

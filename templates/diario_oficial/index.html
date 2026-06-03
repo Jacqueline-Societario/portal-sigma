@@ -1,0 +1,113 @@
+{% extends "base.html" %}
+{% block title %}Diário Oficial{% endblock %}
+{% block page_title %}Diário Oficial{% endblock %}
+
+{% block extra_styles %}
+.construcao-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 420px;
+  text-align: center;
+  padding: 48px 24px;
+}
+.construcao-icon {
+  width: 80px; height: 80px;
+  background: var(--sigma-light);
+  border-radius: 20px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 36px;
+  margin-bottom: 24px;
+  border: 2px solid #f3c8c9;
+}
+.construcao-badge {
+  display: inline-block;
+  background: #fff7ed;
+  color: #c2410c;
+  border: 1px solid #fed7aa;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 1.2px;
+  text-transform: uppercase;
+  padding: 4px 14px;
+  border-radius: 99px;
+  margin-bottom: 16px;
+}
+.construcao-titulo {
+  font-size: 26px;
+  font-weight: 800;
+  color: var(--text);
+  margin-bottom: 12px;
+  line-height: 1.2;
+}
+.construcao-desc {
+  font-size: 15px;
+  color: var(--muted);
+  line-height: 1.7;
+  max-width: 520px;
+  margin-bottom: 32px;
+}
+.construcao-features {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  justify-content: center;
+  max-width: 560px;
+  margin-bottom: 36px;
+}
+.feature-pill {
+  background: var(--white);
+  border: 1px solid var(--border);
+  border-radius: 99px;
+  padding: 6px 16px;
+  font-size: 13px;
+  color: var(--text);
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.feature-pill-dot {
+  width: 6px; height: 6px;
+  background: var(--sigma-red);
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.construcao-footer {
+  font-size: 12px;
+  color: #9ca3af;
+  margin-top: 8px;
+}
+{% endblock %}
+
+{% block content %}
+<div class="construcao-wrap">
+  <div class="construcao-icon">📰</div>
+
+  <span class="construcao-badge">Em construção</span>
+
+  <div class="construcao-titulo">Diário Oficial</div>
+
+  <p class="construcao-desc">
+    Este módulo permitirá consultar e monitorar publicações no Diário Oficial
+    da União, do Estado de Goiás e do Município de Goiânia —
+    diretamente pelo portal, sem precisar acessar os sites oficiais.
+  </p>
+
+  <div class="construcao-features">
+    <div class="feature-pill"><span class="feature-pill-dot"></span>Diário Oficial da União (DOU)</div>
+    <div class="feature-pill"><span class="feature-pill-dot"></span>Diário Oficial de Goiás</div>
+    <div class="feature-pill"><span class="feature-pill-dot"></span>Diário Oficial de Goiânia</div>
+    <div class="feature-pill"><span class="feature-pill-dot"></span>Busca por CNPJ ou razão social</div>
+    <div class="feature-pill"><span class="feature-pill-dot"></span>Alertas automáticos</div>
+    <div class="feature-pill"><span class="feature-pill-dot"></span>Histórico de publicações</div>
+  </div>
+
+  <a href="{{ url_for('dashboard') }}" class="btn btn-outline">
+    Voltar ao início
+  </a>
+
+  <div class="construcao-footer">Previsão de lançamento em breve</div>
+</div>
+{% endblock %}

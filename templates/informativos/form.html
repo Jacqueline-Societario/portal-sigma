@@ -1,0 +1,340 @@
+{% extends 'base.html' %}
+{% block title %}Gerar Informativo{% endblock %}
+
+{% block content %}
+<div class="page-content" style="max-width:860px;">
+
+  {% if erro %}
+  <div class="alert alert-error">{{ erro }}</div>
+  {% endif %}
+
+  <!-- Instrução -->
+  <div style="background:#fff;border:1px solid var(--border);border-radius:8px;
+              padding:18px 24px;margin-bottom:20px;">
+    <p style="font-size:14px;color:var(--muted);line-height:1.7;margin:0;">
+      Descreva abaixo o informativo que você quer criar. A IA vai estruturar automaticamente
+      os passos e gerar o <strong>PowerPoint</strong> (para edição) e o <strong>PDF</strong>
+      (para envio ao cliente).
+    </p>
+  </div>
+
+  <form method="POST" action="{{ url_for('informativos.gerar') }}"
+        enctype="multipart/form-data" id="form-informativo">
+
+    <!-- ── DADOS DO DOCUMENTO ──────────────────────────────────────────── -->
+    <div class="card-secao">
+      <div class="secao-titulo">📋 Dados do Documento</div>
+      <div class="form-grid-2">
+        <div class="form-group">
+          <label>Título principal <span class="obrig">*</span></label>
+          <input type="text" name="titulo" required maxlength="120"
+                 placeholder="Ex: Como acessar a Nota Fiscal SP">
+        </div>
+        <div class="form-group">
+          <label>Subtítulo <span class="muted-lbl">(opcional)</span></label>
+          <input type="text" name="subtitulo" maxlength="120"
+                 placeholder="Ex: Passo a passo simples e rápido">
+        </div>
+        <div class="form-group">
+          <label>Nome do cliente / empresa <span class="muted-lbl">(opcional)</span></label>
+          <input type="text" name="cliente" maxlength="120"
+                 placeholder="Ex: Mizugo Engenharia Ltda">
+        </div>
+      </div>
+    </div>
+
+    <!-- ── CONTEÚDO ORGÂNICO ───────────────────────────────────────────── -->
+    <div class="card-secao">
+      <div class="secao-titulo">✍️ Descreva o informativo
+        <span style="font-size:12px;font-weight:400;color:var(--muted);margin-left:8px;">
+          — a IA estrutura os passos automaticamente
+        </span>
+      </div>
+      <div class="form-group">
+        <label>Conte o que o cliente precisa fazer, passo a passo, com suas próprias palavras:</label>
+        <textarea name="texto_organico" rows="10" required
+                  placeholder="Ex: O cliente precisa acessar o sistema NFS-e da Prefeitura de SP. Primeiro ele vai no site nfe.prefeitura.sp.gov.br. Lá ele clica em 'Acesso com Certificado Digital'. O sistema vai pedir para selecionar o certificado e-CNPJ A1 instalado no computador. Depois de selecionar, ele vai entrar na tela principal onde pode emitir notas. Ele só consegue usar no computador, não funciona no celular. Se precisar de apoio para instalar o certificado, a Sigma pode ajudar..."></textarea>
+        <div style="font-size:12px;color:var(--muted);margin-top:4px;">
+          💡 Quanto mais detalhado, melhor o resultado. Você pode mencionar nomes de botões,
+          endereços de sistemas, avisos importantes, etc.
+        </div>
+      </div>
+    </div>
+
+    <!-- ── AVISOS INICIAIS ─────────────────────────────────────────────── -->
+    <div class="card-secao">
+      <div class="secao-titulo">⚠️ Avisos Iniciais
+        <span style="font-size:12px;font-weight:400;color:var(--muted);margin-left:8px;">
+          — slide "Antes de começar" (opcional)
+        </span>
+      </div>
+      <div id="lista-avisos"></div>
+      <button type="button" class="btn-add" onclick="addAviso()">+ Adicionar aviso</button>
+    </div>
+
+    <!-- ── IMAGENS ─────────────────────────────────────────────────────── -->
+    <div class="card-secao">
+      <div class="secao-titulo">🖼️ Imagens / Prints de Tela
+        <span style="font-size:12px;font-weight:400;color:var(--muted);margin-left:8px;">
+          — serão distribuídas pelos passos em ordem
+        </span>
+      </div>
+      <div id="lista-imagens">
+        <div class="img-item" id="img-item-1">
+          <div class="form-group">
+            <label>Imagem 1 <span class="muted-lbl">(opcional)</span></label>
+            <input type="file" name="imagem_1" accept="image/*"
+                   class="file-input" onchange="previewImg(this, 1)">
+            <div class="img-preview-wrap" id="preview-1" style="display:none;">
+              <img id="prev-img-1" class="img-preview">
+              <button type="button" class="btn-remove-img"
+                      onclick="removeImgPreview(1)">✕ Remover</button>
+            </div>
+          </div>
+        </div>
+      </div>
+      <button type="button" class="btn-add" onclick="addImagem()">+ Adicionar outra imagem</button>
+    </div>
+
+    <!-- ── LINKS ───────────────────────────────────────────────────────── -->
+    <div class="card-secao">
+      <div class="secao-titulo">🔗 Links e Recursos Adicionais
+        <span style="font-size:12px;font-weight:400;color:var(--muted);margin-left:8px;">
+          — slide/seção extra (opcional)
+        </span>
+      </div>
+      <div id="lista-links"></div>
+      <button type="button" class="btn-add" onclick="addLink()">+ Adicionar link</button>
+    </div>
+
+    <!-- ── AÇÕES ──────────────────────────────────────────────────────── -->
+    <div style="display:flex;gap:12px;margin-top:8px;padding-bottom:40px;">
+      <button type="submit" class="btn btn-primary" id="btn-gerar">
+        ⚡ Gerar Informativo
+      </button>
+      <button type="button" class="btn btn-secondary" onclick="limparForm()">
+        🗑️ Limpar
+      </button>
+    </div>
+
+  </form>
+</div>
+
+<!-- ── Templates ocultos ─────────────────────────────────────────────────── -->
+<template id="tpl-aviso">
+  <div class="aviso-bloco" style="display:flex;gap:10px;align-items:center;margin-bottom:8px;">
+    <input type="text" name="aviso" maxlength="200" style="flex:1;"
+           placeholder="Ex: NÃO desinstale o aplicativo antes de desativar a verificação">
+    <button type="button" class="btn-remove-sm"
+            onclick="this.parentElement.remove()">✕</button>
+  </div>
+</template>
+
+<template id="tpl-link">
+  <div class="link-bloco" style="display:grid;grid-template-columns:1fr 2fr auto;gap:10px;align-items:center;margin-bottom:8px;">
+    <div class="form-group" style="margin:0;">
+      <input type="text" name="link_label___IDX__" maxlength="100"
+             placeholder="Descrição do link">
+    </div>
+    <div class="form-group" style="margin:0;">
+      <input type="text" name="link_url___IDX__" maxlength="300"
+             placeholder="https://...">
+    </div>
+    <button type="button" class="btn-remove-sm"
+            onclick="this.parentElement.remove()">✕</button>
+  </div>
+</template>
+
+<style>
+  .card-secao {
+    background: #fff;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 20px 24px;
+    margin-bottom: 18px;
+  }
+  .secao-titulo {
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--sigma-red);
+    margin-bottom: 16px;
+    padding-bottom: 10px;
+    border-bottom: 2px solid var(--sigma-light);
+  }
+  .form-grid-2 {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+  }
+  .form-group { display: flex; flex-direction: column; gap: 5px; }
+  .form-group label {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text);
+  }
+  .muted-lbl { font-weight: 400; color: var(--muted); font-size: 12px; }
+  .form-group input[type="text"],
+  .form-group textarea,
+  .form-group input[type="file"] {
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 8px 12px;
+    font-size: 13px;
+    font-family: 'Segoe UI', Arial, sans-serif;
+    color: var(--text);
+    background: #fafafa;
+    transition: border .15s;
+    resize: vertical;
+  }
+  .form-group textarea {
+    line-height: 1.65;
+  }
+  .form-group input:focus,
+  .form-group textarea:focus {
+    outline: none;
+    border-color: var(--sigma-red);
+    background: #fff;
+  }
+  .file-input { padding: 6px 8px; cursor: pointer; }
+  .obrig { color: var(--sigma-red); }
+  .btn-add {
+    background: none;
+    border: 2px dashed var(--border);
+    color: var(--muted);
+    font-size: 13px;
+    font-weight: 600;
+    padding: 8px 20px;
+    border-radius: 8px;
+    cursor: pointer;
+    width: 100%;
+    margin-top: 4px;
+    transition: all .15s;
+  }
+  .btn-add:hover { border-color: var(--sigma-red); color: var(--sigma-red); }
+  .btn-remove-sm {
+    background: none;
+    border: 1px solid #fca5a5;
+    color: #991b1b;
+    font-size: 13px;
+    padding: 4px 10px;
+    border-radius: 6px;
+    cursor: pointer;
+    white-space: nowrap;
+  }
+  .btn-remove-img {
+    background: #fef2f2;
+    border: 1px solid #fca5a5;
+    color: #991b1b;
+    font-size: 11px;
+    padding: 2px 8px;
+    border-radius: 4px;
+    cursor: pointer;
+    display: block;
+    margin-top: 4px;
+  }
+  .img-preview {
+    max-height: 100px;
+    max-width: 100%;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    margin-top: 6px;
+  }
+  .btn-secondary {
+    background: #f5f5f5;
+    border: 1px solid var(--border);
+    color: var(--muted);
+    padding: 10px 20px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 600;
+    transition: all .15s;
+  }
+  .btn-secondary:hover { background: #eee; }
+  #btn-gerar { padding: 12px 32px; font-size: 15px; font-weight: 700; }
+</style>
+
+<script>
+let _imgIdx  = 1;
+let _linkIdx = 0;
+
+function addAviso() {
+  const tpl = document.getElementById('tpl-aviso').innerHTML;
+  const div = document.createElement('div');
+  div.innerHTML = tpl;
+  document.getElementById('lista-avisos').appendChild(div.firstElementChild);
+}
+
+function addLink() {
+  _linkIdx++;
+  const tpl = document.getElementById('tpl-link').innerHTML
+              .replace(/__IDX__/g, _linkIdx);
+  const div = document.createElement('div');
+  div.innerHTML = tpl;
+  document.getElementById('lista-links').appendChild(div.firstElementChild);
+}
+
+function addImagem() {
+  _imgIdx++;
+  const wrap = document.createElement('div');
+  wrap.className = 'img-item';
+  wrap.id = `img-item-${_imgIdx}`;
+  wrap.innerHTML = `
+    <div class="form-group" style="margin-bottom:10px;">
+      <label>Imagem ${_imgIdx} <span class="muted-lbl">(opcional)</span>
+        <button type="button" class="btn-remove-sm" style="margin-left:8px;"
+                onclick="document.getElementById('img-item-${_imgIdx}').remove()">✕</button>
+      </label>
+      <input type="file" name="imagem_${_imgIdx}" accept="image/*"
+             class="file-input" onchange="previewImg(this, ${_imgIdx})">
+      <div class="img-preview-wrap" id="preview-${_imgIdx}" style="display:none;">
+        <img id="prev-img-${_imgIdx}" class="img-preview">
+        <button type="button" class="btn-remove-img"
+                onclick="removeImgPreview(${_imgIdx})">✕ Remover</button>
+      </div>
+    </div>`;
+  document.getElementById('lista-imagens').appendChild(wrap);
+}
+
+function previewImg(input, idx) {
+  const wrap = document.getElementById(`preview-${idx}`);
+  const img  = document.getElementById(`prev-img-${idx}`);
+  if (input.files && input.files[0]) {
+    const reader = new FileReader();
+    reader.onload = e => { img.src = e.target.result; wrap.style.display = 'block'; };
+    reader.readAsDataURL(input.files[0]);
+  } else {
+    wrap.style.display = 'none';
+  }
+}
+
+function removeImgPreview(idx) {
+  const input = document.querySelector(`input[name="imagem_${idx}"]`);
+  if (input) input.value = '';
+  const wrap = document.getElementById(`preview-${idx}`);
+  if (wrap) wrap.style.display = 'none';
+}
+
+function limparForm() {
+  if (!confirm('Limpar todos os campos?')) return;
+  document.getElementById('form-informativo').reset();
+  document.getElementById('lista-avisos').innerHTML = '';
+  document.getElementById('lista-links').innerHTML  = '';
+  // Remover imagens extras
+  const lista = document.getElementById('lista-imagens');
+  Array.from(lista.querySelectorAll('.img-item')).forEach((el, i) => {
+    if (i > 0) el.remove();
+  });
+  _imgIdx  = 1;
+  _linkIdx = 0;
+  document.getElementById('preview-1').style.display = 'none';
+}
+
+// Feedback no submit
+document.getElementById('form-informativo').addEventListener('submit', function() {
+  const btn = document.getElementById('btn-gerar');
+  btn.disabled    = true;
+  btn.textContent = '⏳ Processando com IA... aguarde';
+});
+</script>
+{% endblock %}

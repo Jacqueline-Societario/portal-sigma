@@ -1,0 +1,574 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}Portal Societário{% endblock %} — Sigma Contabilidade</title>
+  <!-- Lucide Icons (SVG icons profissionais) -->
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+  <style>
+    :root {
+      --sigma-red:   #8A1F2D;
+      --sigma-dark:  #6E1824;
+      --sigma-light: #F3DCDD;
+      --sidebar-w:   240px;
+      --text:        #2F2F2F;
+      --muted:       #6b7280;
+      --border:      #E7DED8;
+      --bg:          #F7F2EC;
+      --white:       #FFFDFC;
+      --radius:      16px;
+      --radius-sm:   8px;
+      --shadow:      0 1px 3px rgba(0,0,0,0.06), 0 4px 12px rgba(0,0,0,0.04);
+      --shadow-md:   0 8px 24px rgba(0,0,0,0.10);
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Segoe UI', -apple-system, Arial, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      height: 100vh;
+      display: flex;
+      overflow: hidden;
+    }
+
+    /* ── Sidebar ─────────────────────────────────────────────────────────── */
+    .sidebar {
+      width: var(--sidebar-w);
+      height: 100vh;
+      background: var(--white);
+      border-right: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      position: fixed;
+      top: 0; left: 0;
+      z-index: 100;
+      overflow: hidden;         /* impede scroll no container externo */
+    }
+
+    /* Logo / cabeçalho da sidebar — fundo vinho conforme referência */
+    .sidebar-logo {
+      padding: 20px 16px 18px;
+      background: var(--sigma-red);
+      border-bottom: 1px solid var(--sigma-dark);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-shrink: 0;
+    }
+    .sidebar-logo-icon {
+      width: 36px; height: 36px;
+      background: rgba(255,255,255,0.18);
+      border-radius: 10px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 13px; font-weight: 800; color: #fff;
+      flex-shrink: 0;
+      letter-spacing: -1px;
+    }
+    .sidebar-logo .brand {
+      font-size: 13px; font-weight: 700; color: #fff;
+      text-transform: uppercase; letter-spacing: .5px; line-height: 1.2;
+    }
+    .sidebar-logo .dept {
+      font-size: 10px; color: rgba(255,255,255,0.72); margin-top: 2px;
+    }
+
+    /* Área de navegação — ESTA é a que rola */
+    .sidebar-nav {
+      flex: 1;
+      min-height: 0;            /* crucial para flex scroll funcionar */
+      overflow-y: auto;
+      overflow-x: hidden;
+      padding: 8px 0 6px;
+    }
+    /* Scrollbar fina e discreta */
+    .sidebar-nav::-webkit-scrollbar { width: 3px; }
+    .sidebar-nav::-webkit-scrollbar-track { background: transparent; }
+    .sidebar-nav::-webkit-scrollbar-thumb { background: #ddd; border-radius: 99px; }
+    .sidebar-nav::-webkit-scrollbar-thumb:hover { background: #bbb; }
+
+    .nav-label {
+      font-size: 10px; font-weight: 800;
+      text-transform: uppercase; letter-spacing: 1.1px;
+      color: #b0b7c3;
+      padding: 12px 16px 4px;
+    }
+    .nav-item {
+      display: flex; align-items: center; gap: 9px;
+      padding: 8px 14px;
+      color: #4b5563;
+      text-decoration: none;
+      font-size: 13px; font-weight: 500;
+      transition: all .15s;
+      border-left: 3px solid transparent;
+      border-radius: 0;
+    }
+    .nav-item:hover {
+      background: var(--bg);
+      color: var(--sigma-red);
+    }
+    .nav-item.active {
+      background: var(--sigma-light);
+      color: var(--sigma-red);
+      border-left-color: var(--sigma-red);
+      font-weight: 600;
+    }
+    .nav-icon {
+      display: flex; align-items: center; justify-content: center;
+      width: 18px; flex-shrink: 0;
+    }
+    .nav-icon svg { width: 15px; height: 15px; stroke: currentColor; }
+
+    /* Rodapé da sidebar — fixo no fundo */
+    .sidebar-footer {
+      padding: 14px 16px;
+      border-top: 1px solid var(--border);
+      background: var(--white);
+      flex-shrink: 0;
+    }
+    .sidebar-footer .user-name {
+      font-weight: 600; color: var(--text); font-size: 12px;
+      display: block; margin-bottom: 6px;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .sidebar-footer-links {
+      display: flex; gap: 10px; flex-wrap: wrap;
+    }
+    .sidebar-footer a {
+      color: var(--muted); text-decoration: none; font-size: 11px;
+      transition: color .15s;
+    }
+    .sidebar-footer a:hover { color: var(--sigma-red); }
+
+    /* ── Área principal ──────────────────────────────────────────────────── */
+    .main-wrap {
+      margin-left: var(--sidebar-w);
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+      overflow: hidden;
+    }
+
+    /* Topbar */
+    .topbar {
+      background: var(--white);
+      border-bottom: 1px solid var(--border);
+      padding: 0 28px;
+      height: 58px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-shrink: 0;
+      z-index: 50;
+    }
+    .topbar-left {
+      display: flex; align-items: center; gap: 8px;
+    }
+    .breadcrumb {
+      display: flex; align-items: center; gap: 6px;
+      font-size: 13px; color: var(--muted);
+    }
+    .breadcrumb a { color: var(--muted); text-decoration: none; transition: color .15s; }
+    .breadcrumb a:hover { color: var(--sigma-red); }
+    .breadcrumb-sep { color: #d1d5db; }
+    .breadcrumb-current { font-weight: 700; color: var(--text); }
+    .topbar-badge {
+      background: var(--sigma-light);
+      color: var(--sigma-red);
+      font-size: 10px; font-weight: 700;
+      padding: 2px 9px; border-radius: 99px;
+      margin-left: 4px;
+    }
+    .topbar-right {
+      display: flex; align-items: center; gap: 10px;
+    }
+    .user-avatar {
+      width: 32px; height: 32px;
+      background: var(--sigma-red);
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      color: #fff; font-size: 12px; font-weight: 700;
+      cursor: default; flex-shrink: 0;
+    }
+    .user-info {
+      font-size: 13px; font-weight: 600; color: var(--text);
+    }
+    .logout-link {
+      color: var(--muted); text-decoration: none;
+      font-size: 12px; padding: 4px 10px;
+      border: 1px solid var(--border); border-radius: 6px;
+      transition: all .15s; display: flex; align-items: center; gap: 4px;
+    }
+    .logout-link svg { width: 13px; height: 13px; }
+    .logout-link:hover { color: var(--sigma-red); border-color: var(--sigma-red); }
+
+    /* Conteúdo da página — ROLA aqui */
+    .page-content {
+      padding: 26px 28px;
+      flex: 1;
+      overflow-y: auto;
+      overflow-x: hidden;
+    }
+    .page-content::-webkit-scrollbar { width: 5px; }
+    .page-content::-webkit-scrollbar-track { background: transparent; }
+    .page-content::-webkit-scrollbar-thumb { background: #d1d5db; border-radius: 99px; }
+
+    /* ── Sino de Notificações ────────────────────────────────────────────── */
+    .notif-wrapper { position: relative; }
+    .notif-btn {
+      background: none; border: none; cursor: pointer;
+      padding: 6px; border-radius: 8px;
+      display: flex; align-items: center; justify-content: center;
+      color: var(--muted);
+      transition: background .15s, color .15s; position: relative;
+    }
+    .notif-btn:hover { background: var(--bg); color: var(--sigma-red); }
+    .notif-btn svg { width: 19px; height: 19px; }
+    .notif-badge {
+      position: absolute; top: 2px; right: 2px;
+      background: var(--sigma-red); color: #fff;
+      font-size: 9px; font-weight: 700;
+      min-width: 15px; height: 15px; border-radius: 99px;
+      display: none; align-items: center; justify-content: center;
+      padding: 0 3px; line-height: 1;
+    }
+    .notif-badge.visible { display: flex; }
+
+    .notif-dropdown {
+      position: absolute; top: calc(100% + 10px); right: 0;
+      width: 360px; background: var(--white);
+      border: 1px solid var(--border); border-radius: var(--radius);
+      box-shadow: var(--shadow-md); z-index: 200;
+      display: none; flex-direction: column; max-height: 520px; overflow: hidden;
+    }
+    .notif-dropdown.open { display: flex; }
+    .notif-header {
+      padding: 13px 15px 9px; border-bottom: 1px solid var(--border);
+      display: flex; align-items: center; justify-content: space-between;
+      flex-shrink: 0;
+    }
+    .notif-header-title { font-size: 13px; font-weight: 700; color: var(--text); }
+    .notif-ler-todas {
+      font-size: 11px; color: var(--sigma-red);
+      background: none; border: none; cursor: pointer;
+      padding: 2px 6px; border-radius: 4px; font-weight: 600;
+      transition: background .15s;
+    }
+    .notif-ler-todas:hover { background: var(--sigma-light); }
+    .notif-body { overflow-y: auto; flex: 1; }
+    .notif-section-label {
+      font-size: 10px; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 1px; color: #b0b7c3; padding: 10px 15px 4px;
+    }
+    .notif-item {
+      display: flex; align-items: flex-start; gap: 10px;
+      padding: 10px 15px; cursor: pointer;
+      border-bottom: 1px solid #f3f4f6; text-decoration: none;
+      transition: background .12s;
+    }
+    .notif-item:hover { background: #f9fafb; }
+    .notif-item.nao-lida { background: #fef8f8; }
+    .notif-item.nao-lida:hover { background: #fdf0f0; }
+    .notif-dot {
+      width: 7px; height: 7px; border-radius: 50%;
+      background: var(--sigma-red); flex-shrink: 0; margin-top: 5px;
+    }
+    .notif-dot.lida { background: transparent; }
+    /* Toast newsletter / manuais */
+    #notifToastContainer {
+      position: fixed; bottom: 28px; right: 24px; z-index: 9999;
+      display: flex; flex-direction: column; gap: 10px; pointer-events: none;
+    }
+    .notif-toast {
+      background: #fff; border-left: 4px solid var(--sigma-red);
+      border-radius: 10px; box-shadow: 0 4px 20px rgba(0,0,0,.13);
+      padding: 14px 18px; max-width: 360px; min-width: 280px;
+      display: flex; flex-direction: column; gap: 6px;
+      pointer-events: all; animation: toastIn .3s ease;
+    }
+    @keyframes toastIn { from{opacity:0;transform:translateY(16px)} to{opacity:1;transform:translateY(0)} }
+    .notif-toast.saindo { animation: toastOut .3s ease forwards; }
+    @keyframes toastOut { to{opacity:0;transform:translateY(16px)} }
+    .notif-toast-label { font-size:11px; font-weight:700; letter-spacing:.5px; text-transform:uppercase; color:var(--sigma-red); }
+    .notif-toast-titulo { font-size:13px; font-weight:600; color:#222; line-height:1.4; }
+    .notif-toast-actions { display:flex; gap:10px; margin-top:2px; }
+    .notif-toast-ver { font-size:12px; font-weight:700; color:#fff; background:var(--sigma-red); border:none; border-radius:6px; padding:5px 14px; cursor:pointer; text-decoration:none; }
+    .notif-toast-ver:hover { background:#8a2228; }
+    .notif-toast-fechar { font-size:12px; color:#888; background:none; border:none; cursor:pointer; padding:5px 6px; }
+    .notif-toast-fechar:hover { color:#333; }
+    .notif-item-content { flex: 1; min-width: 0; }
+    .notif-item-titulo {
+      font-size: 12px; font-weight: 600; color: var(--text);
+      line-height: 1.4; margin-bottom: 2px;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .notif-item-desc { font-size: 11px; color: var(--muted); line-height: 1.4; }
+    .notif-item-time { font-size: 10px; color: #b0b7c3; flex-shrink: 0; margin-top: 2px; }
+    .notif-empty { padding: 28px 15px; text-align: center; color: var(--muted); font-size: 13px; }
+
+    /* ── Utilitários globais ─────────────────────────────────────────────── */
+    .alert {
+      padding: 11px 15px; border-radius: var(--radius-sm);
+      margin-bottom: 14px; font-size: 13px;
+    }
+    .alert-error   { background: #fef2f2; color: #991b1b; border: 1px solid #fca5a5; }
+    .alert-success { background: #f0fdf4; color: #166534; border: 1px solid #86efac; }
+
+    .btn {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 8px 16px; border-radius: var(--radius-sm);
+      font-size: 13px; font-weight: 600; cursor: pointer;
+      border: none; text-decoration: none; transition: all .15s;
+    }
+    .btn svg { width: 14px; height: 14px; }
+    .btn-primary   { background: var(--sigma-red); color: #fff; }
+    .btn-primary:hover { background: var(--sigma-dark); }
+    .btn-outline   { background: transparent; color: var(--sigma-red); border: 1px solid var(--sigma-red); }
+    .btn-outline:hover { background: var(--sigma-light); }
+    .btn-sm        { padding: 5px 12px; font-size: 12px; }
+
+    {% block extra_styles %}{% endblock %}
+  </style>
+  {% block extra_head %}{% endblock %}
+</head>
+<body>
+
+<!-- ─── Sidebar ─────────────────────────────────────────────────────────────── -->
+<nav class="sidebar">
+  <!-- Logo -->
+  <div class="sidebar-logo">
+    <div class="sidebar-logo-icon">G</div>
+    <div>
+      <div class="brand">Sigma</div>
+      <div class="dept">Portal Societário</div>
+    </div>
+  </div>
+
+  <!-- Navegação (rola independentemente) -->
+  <div class="sidebar-nav">
+    {% set ns = namespace(last_cat='') %}
+    {% for m in modules_config if m.sidebar %}
+      {% if m.cat_label != ns.last_cat %}
+        {% set ns.last_cat = m.cat_label %}
+        <div class="nav-label">{{ m.cat_label }}</div>
+      {% endif %}
+      <a href="{{ url_for(m.route) }}"
+         class="nav-item {% if m.blueprint and request.blueprint == m.blueprint %}active{% elif not m.blueprint and request.endpoint == 'dashboard' %}active{% endif %}">
+        <span class="nav-icon"><i data-lucide="{{ m.icon }}"></i></span>
+        {{ m.name }}
+      </a>
+    {% endfor %}
+  </div>
+
+  <!-- Rodapé fixo -->
+  <div class="sidebar-footer">
+    {% if session.get('user_nome') %}
+      <span class="user-name">{{ session.user_nome }}</span>
+    {% endif %}
+    <div class="sidebar-footer-links">
+      <a href="{{ url_for('auth.redefinir_senha') }}">Alterar senha</a>
+      <a href="{{ url_for('passkeys.index') }}">Passkeys</a>
+      <a href="{{ url_for('auth.logout') }}">Sair</a>
+    </div>
+  </div>
+</nav>
+
+<!-- ─── Área principal ───────────────────────────────────────────────────────── -->
+<div class="main-wrap">
+  <!-- Topbar com breadcrumb -->
+  <div class="topbar">
+    <div class="topbar-left">
+      <div class="breadcrumb">
+        <a href="{{ url_for('dashboard') }}">Início</a>
+        {%- set _page_title_content %}{% block page_title %}{% endblock %}{% endset -%}
+        {%- if _page_title_content.strip() %}
+          <span class="breadcrumb-sep">/</span>
+          <span class="breadcrumb-current">{{ _page_title_content.strip() }}</span>
+        {%- endif %}
+        <span class="topbar-badge">Societário</span>
+      </div>
+    </div>
+    <div class="topbar-right">
+      {% if session.get('user_nome') %}
+      <!-- Sino de notificações -->
+      <div class="notif-wrapper" id="notifWrapper">
+        <button class="notif-btn" id="notifBtn" title="Notificações" aria-label="Notificações">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
+            <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
+          </svg>
+          <span class="notif-badge" id="notifBadge"></span>
+        </button>
+        <div class="notif-dropdown" id="notifDropdown">
+          <div class="notif-header">
+            <span class="notif-header-title">Notificações</span>
+            <button class="notif-ler-todas" id="notifLerTodas">Marcar todas como lidas</button>
+          </div>
+          <div class="notif-body" id="notifBody">
+            <div class="notif-empty">Carregando...</div>
+          </div>
+        </div>
+      </div>
+      <div class="user-avatar">{{ session.user_nome[0]|upper }}</div>
+      <span class="user-info">{{ session.user_nome.split()[0] }}</span>
+      {% endif %}
+      <a href="{{ url_for('auth.logout') }}" class="logout-link">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+        Sair
+      </a>
+    </div>
+  </div>
+
+  <!-- Conteúdo (rola independentemente da sidebar) -->
+  <div class="page-content">
+    {% block content %}{% endblock %}
+  </div>
+</div>
+
+{% block extra_scripts %}{% endblock %}
+
+{% if session.get('user_nome') %}
+<script>
+(function() {
+  const btn      = document.getElementById('notifBtn');
+  const dropdown = document.getElementById('notifDropdown');
+  const badge    = document.getElementById('notifBadge');
+  const body     = document.getElementById('notifBody');
+  const lerTodas = document.getElementById('notifLerTodas');
+  if (!btn) return;
+
+  function tempoRelativo(isoStr) {
+    if (!isoStr) return '';
+    const d = new Date(isoStr.replace(' ', 'T') + 'Z');
+    const diff = Math.floor((Date.now() - d.getTime()) / 1000);
+    if (diff < 60)    return 'agora';
+    if (diff < 3600)  return Math.floor(diff/60) + 'm';
+    if (diff < 86400) return Math.floor(diff/3600) + 'h';
+    return Math.floor(diff/86400) + 'd';
+  }
+
+  function esc(s) {
+    return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  }
+
+  function renderNotifs(data) {
+    const total = data.total_nao_lidas || 0;
+    if (total > 0) { badge.textContent = total > 99 ? '99+' : total; badge.classList.add('visible'); }
+    else badge.classList.remove('visible');
+    verificarToastsNovos(data);
+
+    let html = '';
+    if (data.nao_lidas && data.nao_lidas.length > 0) {
+      html += '<div class="notif-section-label">Não lidas</div>';
+      data.nao_lidas.forEach(function(n) {
+        html += `<div class="notif-item nao-lida" data-id="${n.id}" data-link="${esc(n.link_destino||'')}">
+          <span class="notif-dot"></span>
+          <div class="notif-item-content">
+            <div class="notif-item-titulo">${esc(n.titulo)}</div>
+            ${n.descricao ? `<div class="notif-item-desc">${esc(n.descricao)}</div>` : ''}
+          </div>
+          <span class="notif-item-time">${tempoRelativo(n.data_criacao)}</span>
+        </div>`;
+      });
+    }
+    if (data.lidas && data.lidas.length > 0) {
+      html += '<div class="notif-section-label">Lidas</div>';
+      data.lidas.forEach(function(n) {
+        html += `<div class="notif-item" data-id="${n.id}" data-link="${esc(n.link_destino||'')}">
+          <span class="notif-dot lida"></span>
+          <div class="notif-item-content">
+            <div class="notif-item-titulo" style="color:var(--muted);font-weight:500;">${esc(n.titulo)}</div>
+            ${n.descricao ? `<div class="notif-item-desc">${esc(n.descricao)}</div>` : ''}
+          </div>
+          <span class="notif-item-time">${tempoRelativo(n.data_criacao)}</span>
+        </div>`;
+      });
+    }
+    if (!html) html = '<div class="notif-empty">Nenhuma notificação</div>';
+    body.innerHTML = html;
+
+    body.querySelectorAll('.notif-item').forEach(function(el) {
+      el.addEventListener('click', function() {
+        const id   = parseInt(el.dataset.id);
+        const link = el.dataset.link;
+        fetch('/api/notificacoes/' + id + '/ler', { method: 'POST' }).then(function() { fetchNotifs(); });
+        if (link) window.location.href = link;
+      });
+    });
+  }
+
+  function fetchNotifs() {
+    fetch('/api/notificacoes')
+      .then(function(r) { return r.ok ? r.json() : null; })
+      .then(function(data) { if (data) renderNotifs(data); })
+      .catch(function() {});
+  }
+
+  btn.addEventListener('click', function(e) { e.stopPropagation(); dropdown.classList.toggle('open'); });
+  document.addEventListener('click', function(e) {
+    if (!document.getElementById('notifWrapper').contains(e.target)) dropdown.classList.remove('open');
+  });
+  lerTodas.addEventListener('click', function(e) {
+    e.stopPropagation();
+    fetch('/api/notificacoes/ler-todas', { method: 'POST' }).then(function() { fetchNotifs(); });
+  });
+
+  var _toastShownKey = 'sigma_notif_toasted';
+  function _getToasted(){try{return JSON.parse(localStorage.getItem(_toastShownKey)||'[]')}catch(e){return[]}}
+  function _addToasted(id){var a=_getToasted();a.push(id);if(a.length>200)a=a.slice(-100);localStorage.setItem(_toastShownKey,JSON.stringify(a))}
+  function _labelModulo(m){
+    if(m==='newsletter')return 'Informativo';
+    if(m==='manuais')return 'Manual';
+    return m;
+  }
+  function mostrarToast(n){
+    var c=document.getElementById('notifToastContainer');if(!c)return;
+    var t=document.createElement('div');t.className='notif-toast';
+    var prefixos=['Novo informativo publicado — ','Informativo atualizado — ','Novo manual publicado — ','Manual atualizado — '];
+    var titulo=n.titulo;
+    prefixos.forEach(function(p){titulo=titulo.replace(p,'')});
+    t.innerHTML=
+      '<div class="notif-toast-label">'+_labelModulo(n.modulo)+'</div>'+
+      '<div class="notif-toast-titulo">'+esc(titulo)+'</div>'+
+      '<div class="notif-toast-actions">'+
+        '<a class="notif-toast-ver" href="'+esc(n.link_destino||'/') +'">Ver agora</a>'+
+        '<button class="notif-toast-fechar">Fechar</button>'+
+      '</div>';
+    c.appendChild(t);
+    t.querySelector('.notif-toast-ver').addEventListener('click',function(){
+      fetch('/api/notificacoes/'+n.id+'/ler',{method:'POST'});removerToast(t);
+    });
+    t.querySelector('.notif-toast-fechar').addEventListener('click',function(){removerToast(t)});
+    setTimeout(function(){removerToast(t)},8000);
+  }
+  function removerToast(t){
+    t.classList.add('saindo');
+    setTimeout(function(){if(t.parentNode)t.parentNode.removeChild(t)},300);
+  }
+  function verificarToastsNovos(data){
+    if(!data.nao_lidas)return;
+    var toasted=_getToasted(),agora=Date.now();
+    data.nao_lidas.forEach(function(n){
+      if(n.modulo!=='newsletter'&&n.modulo!=='manuais')return;
+      if(toasted.indexOf(n.id)!==-1)return;
+      var criado=new Date(n.data_criacao.replace(' ','T')+'Z').getTime();
+      if(agora-criado>48*3600*1000){_addToasted(n.id);return;}
+      _addToasted(n.id);
+      mostrarToast(n);
+    });
+  }
+
+  fetchNotifs();
+  setInterval(fetchNotifs, 60000);
+})();
+</script>
+{% endif %}
+
+<!-- Inicializar ícones Lucide -->
+<script>
+  if (typeof lucide !== 'undefined') lucide.createIcons();
+</script>
+<div id="notifToastContainer"></div>
+</body>
+</html>
