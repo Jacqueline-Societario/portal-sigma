@@ -1,5 +1,5 @@
 # PROJETO_STATUS — Sigma / Portal Societário
-**Última atualização**: 01/05/2026 | **Responsável**: Yuzu
+**Última atualização**: 03/06/2026 | **Responsável**: Yuzu
 
 ## STATUS GERAL
 Portal web Flask do Departamento Societário da Sigma Contabilidade. Rodando na VPS Sigma (societario.gsigma.com.br, porta 5080). **Novo layout implementado (07/04/2026 noite): sidebar branca, dashboard com saudação + cards, empresas com filter pills + grid de cards.**
@@ -131,3 +131,4 @@ templates/
 | 08/04/2026 | Busca ao vivo /empresas/ (debounce 400ms) + Requerimento Uso do Solo Goiânia em /declaracoes/ (CNAEs individuais com escritório, DOCX padrão Prefeitura) | ✅ |
 | 29/04/2026 | Fix crítico: email 2FA não chegava — token.json em caminho errado na VPS; corrigido email_utils.py (fallback); portal reiniciado PID 1935340 | ✅ |
 | 30/04/2026 | Módulo Processos em Andamento: blueprint, 3 tabelas, UI, webhook, importação 29 respostas históricas. OAuth Forms falhou (client deletado) | ⚠️ |
+| 03/06/2026 | Git/GitHub: SECRET_KEY adicionada ao .env VPS (sem exibir), permissões normalizadas (04e53bc), core.filemode=false, DEPLOY.md+CHECKLIST+README atualizados, commit bc64846 publicado no GitHub | ✅ |
