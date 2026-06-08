@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Verificação — Portal Societário Sigma</title>
+  <style>
+    :root { --red: #A72C31; --dark: #7a1f23; }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Segoe UI', Arial, sans-serif;
+      background: #f5f5f5;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .wrap {
+      background: #fff;
+      border-radius: 12px;
+      box-shadow: 0 4px 32px rgba(0,0,0,0.10);
+      padding: 48px 40px;
+      width: 100%;
+      max-width: 420px;
+    }
+    .logo-area { text-align: center; margin-bottom: 28px; }
+    .logo-area img { max-width: 100px; margin-bottom: 10px; }
+    .logo-area .brand { font-size: 18px; font-weight: 800; color: var(--red); display: block; }
+    .logo-area .dept { font-size: 12px; color: #666; margin-top: 2px; }
+    .icon-shield {
+      width: 56px; height: 56px; background: #fee2e2; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      margin: 0 auto 20px;
+    }
+    h1 { font-size: 20px; font-weight: 700; color: #222; margin-bottom: 8px; text-align: center; }
+    .subtitle { font-size: 13px; color: #666; margin-bottom: 28px; line-height: 1.6; text-align: center; }
+    .subtitle strong { color: #333; }
+    label { display: block; font-size: 13px; font-weight: 600; color: #444; margin-bottom: 8px; }
+    .codigo-input {
+      width: 100%;
+      padding: 16px 14px;
+      border: 2px solid #ddd;
+      border-radius: 10px;
+      font-size: 28px;
+      font-weight: 800;
+      letter-spacing: 14px;
+      text-align: center;
+      margin-bottom: 20px;
+      outline: none;
+      transition: border-color .15s;
+      font-family: 'Courier New', monospace;
+      color: var(--red);
+    }
+    .codigo-input:focus { border-color: var(--red); }
+    .btn {
+      width: 100%; padding: 13px; background: var(--red); color: #fff;
+      font-size: 15px; font-weight: 700; border: none; border-radius: 8px;
+      cursor: pointer; transition: background .15s;
+    }
+    .btn:hover { background: var(--dark); }
+    .alert-error {
+      background: #fef2f2; color: #991b1b; border: 1px solid #fca5a5;
+      padding: 10px 14px; border-radius: 8px; font-size: 13px; margin-bottom: 16px;
+    }
+    .alert-success {
+      background: #f0fdf4; color: #166534; border: 1px solid #86efac;
+      padding: 10px 14px; border-radius: 8px; font-size: 13px; margin-bottom: 16px;
+      text-align: center;
+    }
+    .reenviar-form { text-align: center; margin-top: 20px; }
+    .btn-link {
+      background: none; border: none; color: var(--red); font-size: 13px;
+      cursor: pointer; text-decoration: underline; padding: 0;
+    }
+    .btn-link:hover { color: var(--dark); }
+    .back-link {
+      display: block; text-align: center; margin-top: 14px;
+      font-size: 12px; color: #999; text-decoration: none;
+    }
+    .back-link:hover { color: #666; }
+    .hint { font-size: 12px; color: #aaa; text-align: center; margin-bottom: 6px; }
+  </style>
+</head>
+<body>
+<div class="wrap">
+  <div class="logo-area">
+    <img src="{{ url_for('static', filename='sigma_logo.png') }}" alt="Sigma" onerror="this.style.display='none'">
+    <span class="brand">Sigma Contabilidade</span>
+    <span class="dept">Portal Societário</span>
+  </div>
+
+  <div class="icon-shield">
+    <svg width="28" height="28" fill="none" stroke="#A72C31" stroke-width="2" viewBox="0 0 24 24">
+      <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+      <polyline points="9 12 11 14 15 10"/>
+    </svg>
+  </div>
+
+  <h1>Verificação em duas etapas</h1>
+  <p class="subtitle">
+    Enviamos um código de 6 dígitos para<br>
+    <strong>{{ email_mascarado }}</strong>
+  </p>
+
+  {% if erro %}
+  <div class="alert-error">{{ erro }}</div>
+  {% endif %}
+
+  {% if sucesso_reenvio %}
+  <div class="alert-success">Novo código enviado! Verifique seu e-mail.</div>
+  {% endif %}
+
+  <form method="POST">
+    <label for="codigo">Código de verificação</label>
+    <input type="text" id="codigo" name="codigo" class="codigo-input"
+           placeholder="000000" maxlength="6" inputmode="numeric"
+           autocomplete="one-time-code" autofocus required>
+    <p class="hint">Válido por 30 minutos</p>
+    <button type="submit" class="btn" id="btnVerificar">Verificar e Entrar</button>
+  </form>
+
+  <div class="reenviar-form">
+    <span style="font-size:13px;color:#888;">Não recebeu? </span>
+    <form method="POST" style="display:inline;">
+      <input type="hidden" name="acao" value="reenviar">
+      <button type="submit" class="btn-link" id="btnReenviar">Reenviar código</button>
+    </form>
+  </div>
+
+  <a href="{{ url_for('auth.login') }}" class="back-link">← Voltar ao login</a>
+</div>
+
+<script>
+  // Auto-formatar: aceitar só dígitos
+  document.getElementById('codigo').addEventListener('input', function() {
+    this.value = this.value.replace(/\D/g, '').slice(0, 6);
+  });
+
+  // Desabilitar botão verificar após clique (evitar duplo envio)
+  document.getElementById('btnVerificar').closest('form').addEventListener('submit', function() {
+    var btn = document.getElementById('btnVerificar');
+    btn.disabled = true;
+    btn.textContent = 'Verificando...';
+  });
+
+  // Desabilitar botão reenviar após clique
+  document.getElementById('btnReenviar').closest('form').addEventListener('submit', function() {
+    var btn = document.getElementById('btnReenviar');
+    btn.disabled = true;
+    btn.textContent = 'Enviando...';
+  });
+</script>
+</body>
+</html>
