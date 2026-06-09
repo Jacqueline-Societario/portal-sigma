@@ -578,6 +578,12 @@ function togglePerm(userId, tool, checkbox) {
   .then(data => {
     if (data.ok) {
       showToast(allowed ? 'Acesso liberado' : 'Acesso bloqueado');
+    } else if (data.stepup_required) {
+      checkbox.checked = !allowed;
+      showToast('Verificação de segurança necessária. Redirecionando…', true);
+      setTimeout(() => {
+        window.location.href = data.verify_url || '/webauthn/verify?purpose=stepup&next=/admin/';
+      }, 1500);
     } else {
       checkbox.checked = !allowed;  // reverter
       showToast(data.erro || 'Erro ao salvar', true);
