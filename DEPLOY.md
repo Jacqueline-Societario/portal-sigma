@@ -137,8 +137,22 @@ systemctl --user restart portal-sigma.service
 systemctl --user status portal-sigma.service
 ```
 
-Reiniciar somente quando blueprints, portal.py, database.py ou security.py foram alterados.
-Alteracoes apenas em templates HTML, CSS ou assets estaticos nao exigem reinicio.
+Reiniciar quando qualquer um dos itens abaixo for alterado:
+- Arquivos Python: blueprints, portal.py, database.py, security.py
+- Templates HTML (ver aviso abaixo)
+
+**Atencao — templates .html (licao aprendida em 08/06/2026):**
+Em producao com Flask `debug=False`, o Jinja2 mantem templates compilados em cache/memoria
+enquanto o processo estiver rodando. Substituir o arquivo `.html` em disco nao e suficiente.
+O servico precisa ser reiniciado para que o template corrigido seja carregado.
+
+```bash
+systemctl --user restart portal-sigma.service
+systemctl --user is-active portal-sigma.service
+curl -s -o /dev/null -w '%{http_code}' http://localhost:5080/login
+```
+
+Assets estaticos (CSS, JS, imagens em `static/`) nao exigem reinicio — sao servidos direto do disco.
 
 ### Etapa 6 — Testar apos deploy
 
@@ -190,3 +204,4 @@ Se algo der errado apos deploy:
 
 - 02/06/2026 | e9fda46 | Commit inicial — Git proprio criado | Jacqueline / Yuzu
 - 03/06/2026 | 04e53bc | Normalizar permissoes de assets binarios | Yuzu (nao implantado na VPS ainda)
+- 08/06/2026 | 4a55953 | fix: corrigir ids f_nome/f_cnpj em detalhe.html — campos Nome e CNPJ nao salvavam | Yuzu (implantado + restart servico)
