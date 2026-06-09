@@ -145,14 +145,14 @@
     <div class="campo-label" style="margin-bottom:6px;">Nome da Empresa</div>
     <div class="view-campo" style="font-size:18px;font-weight:700;margin-bottom:8px;">{{ empresa.nome_empresa }}</div>
     <div class="edit-field-wrap" style="margin-bottom:8px;">
-      <input type="text" name="nome_empresa" id="f_nome" value="{{ empresa.nome_empresa }}">
+      <input type="text" name="nome_empresa" id="f_nome_empresa" value="{{ empresa.nome_empresa }}">
     </div>
 
     <!-- CNPJ -->
     <div class="campo-label" style="margin-bottom:4px;">CNPJ/CPF</div>
     <div class="view-campo" style="font-family:monospace;font-size:16px;font-weight:700;">{{ empresa.cnpj_cpf or '—' }}</div>
     <div class="edit-field-wrap">
-      <input type="text" name="cnpj_cpf" id="f_cnpj" value="{{ empresa.cnpj_cpf or '' }}">
+      <input type="text" name="cnpj_cpf" id="f_cnpj_cpf" value="{{ empresa.cnpj_cpf or '' }}">
     </div>
   </div>
 
