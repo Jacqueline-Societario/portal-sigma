@@ -217,6 +217,7 @@
 <script>
 // ── Estado ────────────────────────────────────────────────────────────────────
 const selecionados = new Map(); // codigo → {codigo, descricao}
+let _consultandoObjetiva = false;
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 function formatarCodigo(raw) {
@@ -378,13 +379,15 @@ document.getElementById('btnBuscar').addEventListener('click', buscarIbge);
 // ── Consultar Objetiva ────────────────────────────────────────────────────────
 document.getElementById('btnConsultar').addEventListener('click', async () => {
   if (selecionados.size === 0) return;
+  if (_consultandoObjetiva) return;
 
+  _consultandoObjetiva = true;
   const btn = document.getElementById('btnConsultar');
   btn.disabled = true;
   btn.innerHTML = '<span class="spinner"></span> Consultando Objetiva...';
 
   const corpo = document.getElementById('resultadosBody');
-  corpo.innerHTML = '<div class="estado-vazio"><div>Consultando Objetiva Edições...</div></div>';
+  corpo.innerHTML = '<div class="estado-vazio"><div>Consultando Objetiva Edições...<br><span style="font-size:11px;color:var(--muted);">Na primeira consulta do dia pode levar até 60 segundos.</span></div></div>';
   document.getElementById('btnCopiar').style.display = 'none';
 
   const codigos = Array.from(selecionados.keys());
@@ -407,6 +410,7 @@ document.getElementById('btnConsultar').addEventListener('click', async () => {
   } catch (e) {
     corpo.innerHTML = `<div class="estado-vazio"><div style="color:#991b1b;">Erro na consulta. Tente novamente.</div></div>`;
   } finally {
+    _consultandoObjetiva = false;
     btn.disabled = false;
     btn.innerHTML = 'Consultar Tributação na Objetiva';
     atualizarTags();

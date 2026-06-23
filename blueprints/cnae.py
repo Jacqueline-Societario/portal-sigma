@@ -183,6 +183,9 @@ def _obter_sessao_objetiva() -> httpx.Client:
             'post_login': user, 'post_senha': senha,
             'post': '1', 'g-recaptcha-response': token,
         }, timeout=15)
+        r_verify = s.get(_OBJETIVA_BUSCA_URL, timeout=15)
+        if 'post_login' in r_verify.text:
+            raise RuntimeError('Login na Objetiva falhou — captcha ou credenciais rejeitados')
         _obj_session = s
         _obj_logado = True
         return _obj_session
@@ -191,11 +194,6 @@ def _obter_sessao_objetiva() -> httpx.Client:
 def _resetar_sessao_objetiva():
     global _obj_session, _obj_logado
     with _obj_lock:
-        if _obj_session:
-            try:
-                _obj_session.close()
-            except Exception:
-                pass
         _obj_session = None
         _obj_logado  = False
 
