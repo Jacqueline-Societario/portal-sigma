@@ -1,5 +1,5 @@
 # PROJETO_STATUS — Sigma / Portal Societário
-**Última atualização**: 03/06/2026 | **Responsável**: Yuzu
+**Última atualização**: 24/06/2026 | **Responsável**: Yuzu
 
 ## STATUS GERAL
 Portal web Flask do Departamento Societário da Sigma Contabilidade. Rodando na VPS Sigma (societario.gsigma.com.br, porta 5080). **Novo layout implementado (07/04/2026 noite): sidebar branca, dashboard com saudação + cards, empresas com filter pills + grid de cards.**
@@ -26,6 +26,8 @@ Portal web Flask do Departamento Societário da Sigma Contabilidade. Rodando na 
 - [x] **PDF estruturado (Processos)** — seções automáticas: Dados do Envio / Empresa / Sócios / Demais; nome de arquivo amigável com razão social (01/05/2026)
 - [x] **Botão "Baixar PDF"** — substituiu "Acessar Formulário"; sempre habilitado, sem dependência de link Google Forms (01/05/2026)
 - [x] **Fix Alteração Contratual** — subtítulo do card usa "Informe o nome da empresa..."; filtro Respostas: só e-mail + "Haverá alteração de..." (01/05/2026)
+- [x] **Fix: campos Nome/CNPJ não salvavam em /empresas/{id}** — id mismatch (f_nome→f_nome_empresa, f_cnpj→f_cnpj_cpf) + cache Jinja2 (restart obrigatório após deploy HTML) — 08/06/2026
+- [x] **Fix: togglePerm não tratava stepup_required** — before_request de step-up retornava 403 com `stepup_required: true` mas o frontend caia no fallback "Erro ao salvar". Adicionado `else if (data.stepup_required)` que reverte checkbox, exibe aviso e redireciona para `data.verify_url`. Commit d862b1a — 09/06/2026
 - [ ] **Integração direta Google Forms** — client_secret.json com OAuth client deletado (invalid_client). Pendente: recriar cliente OAuth no Google Cloud Console OU configurar polling via Sheets ⚠️
 - [ ] **Editor Quill (Manuais/Informativos)** — CDN trocado para jsDelivr mas editor ainda NÃO aparece no browser ⚠️
 - [ ] **Upload "Failed to fetch"** — fix de sessão aplicado mas problema persiste ⚠️
@@ -73,7 +75,7 @@ Portal web Flask do Departamento Societário da Sigma Contabilidade. Rodando na 
 - Usuário SSH: `jacqueline-benedito` | Chave: `~/.ssh/id_sigma_jacqueline`
 - SSH ControlMaster: `ssh -o ControlMaster=auto -o ControlPath=/tmp/ssh-ctrl-sigma2 -o ControlPersist=600 -o ConnectTimeout=10 -p 22022 -i ~/.ssh/id_sigma_jacqueline jacqueline-benedito@129.121.54.101 "echo OK"`
 - URL: `https://societario.gsigma.com.br` (Traefik → 172.17.0.1:5080)
-- Processo: `/home/jacqueline-benedito/projetos/portal-sigma/.venv/bin/python3 portal.py` (PID 1935340 — reiniciado 29/04/2026 19:47 UTC)
+- Processo: `/home/jacqueline-benedito/projetos/portal-sigma/.venv/bin/python3 portal.py` (reiniciado 08/06/2026 22:40 BRT via systemctl --user restart)
 - Logs: `~/logs/portal-sigma.log`
 - **Deploy**: SSH ControlMaster + base64 chunks (ver sessão 06/04/2026)
 - **Email 2FA**: token.json em `credentials/token.json` DENTRO da pasta do portal (não 3 níveis acima)
@@ -93,6 +95,8 @@ Portal web Flask do Departamento Societário da Sigma Contabilidade. Rodando na 
 - [ ] **URGENTE: Diagnosticar e corrigir editor Quill não aparece** — testar CDN no browser da Sigma, inspecionar console JS, verificar se div tem height > 0
 - [ ] Testar acesso por outra colaboradora (societario2@gsigma.com.br)
 - [ ] **Exibir campo `responsavel` na lista e detalhe de empresas no portal** (08/04/2026)
+- [ ] **Painel de Avisos** — planejado. Plano: `docs/PLANO_PAINEL_AVISOS.md`. Mapeamento cirúrgico: `docs/MAPEAMENTO_IMPACTO_PAINEL_AVISOS.md`. Mockup: `docs/mockup_painel_avisos.html`
+- [ ] **IMPLEMENTAR: Painel de Avisos** — 5 arquivos (database.py, portal.py, blueprints/avisos.py, templates/avisos/index.html, base.html). Mapeamento completo pronto.
 - [ ] Phase 2: Módulo Consulta de Empresas (integração Gestta nightly sync)
 - [ ] Adicionar mais usuárias conforme necessário (editar database.py)
 
@@ -132,3 +136,4 @@ templates/
 | 29/04/2026 | Fix crítico: email 2FA não chegava — token.json em caminho errado na VPS; corrigido email_utils.py (fallback); portal reiniciado PID 1935340 | ✅ |
 | 30/04/2026 | Módulo Processos em Andamento: blueprint, 3 tabelas, UI, webhook, importação 29 respostas históricas. OAuth Forms falhou (client deletado) | ⚠️ |
 | 03/06/2026 | Git/GitHub: SECRET_KEY adicionada ao .env VPS (sem exibir), permissões normalizadas (04e53bc), core.filemode=false, DEPLOY.md+CHECKLIST+README atualizados, commit bc64846 publicado no GitHub | ✅ |
+| 24/06/2026 | Planejamento Painel de Avisos: análise de todos os arquivos-chave (database.py, portal.py, base.html), plano consolidado, mapeamento cirúrgico com pontos exatos de inserção por linha. Implementação pendente. | ⚠️ |
