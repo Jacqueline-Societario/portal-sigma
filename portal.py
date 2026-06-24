@@ -63,6 +63,7 @@ from blueprints.webauthn_bp import webauthn_bp
 from blueprints.passkeys import passkeys_bp
 from blueprints.processos import processos_bp
 from blueprints.anotacoes import anotacoes_bp
+from blueprints.avisos import avisos_bp
 
 import database
 
@@ -230,6 +231,16 @@ MODULES_CONFIG = [
         'blueprint': 'anotacoes', 'tool_key': 'anotacoes',
         'admin_only': False, 'enabled': True,
     },
+    {
+        'id': 'avisos', 'name': 'Painel de Avisos',
+        'desc': 'Gestão de comunicados e avisos para a equipe.',
+        'category': 'administracao', 'cat_label': 'Administração',
+        'icon': 'megaphone', 'route': 'avisos.index',
+        'keywords': 'aviso comunicado painel informação urgente prazo',
+        'sidebar': False, 'home': False, 'quick': False,
+        'blueprint': 'avisos', 'tool_key': 'avisos',
+        'admin_only': False, 'enabled': True,
+    },
 ]
 
 
@@ -279,6 +290,7 @@ app.register_blueprint(webauthn_bp)
 app.register_blueprint(passkeys_bp)
 app.register_blueprint(processos_bp)
 app.register_blueprint(anotacoes_bp)
+app.register_blueprint(avisos_bp)
 
 
 # ─── Context processor — Módulos (fonte única de verdade) ─────────────────────
@@ -391,7 +403,7 @@ def verificar_stepup_sensivel():
     # Rotas que não precisam de step-up
     _SKIP_STEPUP = ('/webauthn/', '/passkeys/', '/static/', '/login',
                     '/logout', '/esqueceu-senha', '/redefinir-senha',
-                    '/api/notificacoes', '/favicon')
+                    '/api/notificacoes', '/api/avisos', '/favicon')
     if any(path.startswith(p) for p in _SKIP_STEPUP):
         return
 
@@ -471,6 +483,26 @@ def api_notificacoes_ler_todas():
     if login_obrigatorio():
         return jsonify({'erro': 'Não autorizado'}), 401
     database.marcar_todas_lidas(session.get('user_id'))
+    return jsonify({'ok': True})
+
+
+@app.route('/api/avisos/proximo')
+def api_avisos_proximo():
+    if login_obrigatorio():
+        return jsonify({'aviso': None}), 200
+    uid = session.get('user_id')
+    aviso = database.get_aviso_proximo(uid)
+    if aviso:
+        database.registrar_exibicao_aviso(aviso['id'], uid)
+    return jsonify({'aviso': aviso})
+
+
+@app.route('/api/avisos/<int:aviso_id>/ler', methods=['POST'])
+def api_avisos_ler(aviso_id):
+    if login_obrigatorio():
+        return jsonify({'erro': 'Não autorizado'}), 401
+    uid = session.get('user_id')
+    database.marcar_aviso_lido(aviso_id, uid)
     return jsonify({'ok': True})
 
 

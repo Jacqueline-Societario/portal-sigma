@@ -307,6 +307,59 @@
     .notif-item-time { font-size: 10px; color: #b0b7c3; flex-shrink: 0; margin-top: 2px; }
     .notif-empty { padding: 28px 15px; text-align: center; color: var(--muted); font-size: 13px; }
 
+    /* ── Painel de Avisos ─────────────────────────────────────────────────── */
+    .avisos-wrapper { position: relative; margin-right: 4px; }
+    .avisos-btn {
+      display: flex; align-items: center; justify-content: center;
+      width: 34px; height: 34px; border-radius: 50%;
+      background: #A72C31; color: #fff; text-decoration: none;
+      transition: background .2s, transform .15s;
+    }
+    .avisos-btn:hover { background: #8e2228; transform: scale(1.08); }
+    .avisos-btn svg { width: 16px; height: 16px; }
+    .aviso-float-card {
+      position: fixed; bottom: 30px; right: 28px; width: 340px;
+      border-radius: 14px; background: var(--surface, #fff);
+      box-shadow: 0 8px 40px rgba(0,0,0,.18);
+      border: 1px solid var(--border, #e5e7eb);
+      z-index: 8000; overflow: hidden;
+      animation: avisoSlideIn .25s ease;
+    }
+    @keyframes avisoSlideIn {
+      from { opacity: 0; transform: translateY(20px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    .aviso-float-topbar { height: 4px; width: 100%; }
+    .aviso-float-inner { padding: 14px 16px 16px; }
+    .aviso-float-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; margin-bottom: 8px; }
+    .aviso-float-tipo-badge {
+      display: inline-block; padding: 2px 9px;
+      border-radius: 99px; font-size: 10px; font-weight: 700;
+      text-transform: uppercase; letter-spacing: .4px; flex-shrink: 0;
+    }
+    .aviso-float-x {
+      background: none; border: none; cursor: pointer; color: var(--muted, #888);
+      font-size: 18px; line-height: 1; padding: 0; flex-shrink: 0;
+    }
+    .aviso-float-x:hover { color: var(--text, #333); }
+    .aviso-float-titulo {
+      font-size: 14px; font-weight: 700; color: var(--text, #222);
+      line-height: 1.4; margin-bottom: 6px;
+    }
+    .aviso-float-corpo {
+      font-size: 13px; color: var(--muted, #666); line-height: 1.55;
+      margin-bottom: 12px; max-height: 80px; overflow: hidden;
+    }
+    .aviso-float-footer { display: flex; align-items: center; justify-content: space-between; }
+    .aviso-float-link { font-size: 12px; color: #2563eb; text-decoration: none; }
+    .aviso-float-link:hover { text-decoration: underline; }
+    .aviso-float-entendi {
+      padding: 6px 16px; border-radius: 7px; border: none;
+      font-size: 13px; font-weight: 700; cursor: pointer; color: #fff;
+      transition: opacity .15s;
+    }
+    .aviso-float-entendi:hover { opacity: .87; }
+
     /* ── Utilitários globais ─────────────────────────────────────────────── */
     .alert {
       padding: 11px 15px; border-radius: var(--radius-sm);
@@ -391,6 +444,17 @@
     </div>
     <div class="topbar-right">
       {% if session.get('user_nome') %}
+      <!-- Botão Painel de Avisos -->
+      {% set _avisos_mod = modules_config | selectattr('id','equalto','avisos') | list %}
+      {% if _avisos_mod %}
+      <div class="avisos-wrapper">
+        <a href="{{ url_for('avisos.index') }}" class="avisos-btn" title="Painel de Avisos">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M3 11l19-9-9 19-2-8-8-2z"/>
+          </svg>
+        </a>
+      </div>
+      {% endif %}
       <!-- Sino de notificações -->
       <div class="notif-wrapper" id="notifWrapper">
         <button class="notif-btn" id="notifBtn" title="Notificações" aria-label="Notificações">
@@ -561,6 +625,93 @@
 
   fetchNotifs();
   setInterval(fetchNotifs, 60000);
+
+  // ── Extensão _labelModulo para avisos ────────────────────────────────────
+  const _labelModuloOrig = typeof _labelModulo === 'function' ? _labelModulo : null;
+  window._labelModulo = function(m) {
+    if (m === 'avisos') return 'Aviso';
+    return _labelModuloOrig ? _labelModuloOrig(m) : m;
+  };
+})();
+</script>
+
+<script>
+(function() {
+  const TIPOS = {
+    urgente:     { bg: '#fee2e2', color: '#b91c1c' },
+    importante:  { bg: '#ffedd5', color: '#ea580c' },
+    aviso:       { bg: '#fef9c3', color: '#d97706' },
+    dica:        { bg: '#dcfce7', color: '#16a34a' },
+    sistema:     { bg: '#dbeafe', color: '#2563eb' },
+    procedimento:{ bg: '#ede9fe', color: '#7c3aed' },
+    prazo:       { bg: '#fce7f3', color: '#db2777' },
+  };
+
+  let _cardAtivo = false;
+  let _avisoAtualId = null;
+
+  function fecharCard() {
+    const c = document.getElementById('avisoFloatCard');
+    if (!c) return;
+    c.style.transition = 'opacity .2s, transform .2s';
+    c.style.opacity = '0';
+    c.style.transform = 'translateY(16px)';
+    setTimeout(() => { c && c.remove(); }, 220);
+    _cardAtivo = false;
+    _avisoAtualId = null;
+  }
+
+  async function marcarLido(avisoId) {
+    await fetch(`/api/avisos/${avisoId}/ler`, { method: 'POST' });
+    fecharCard();
+  }
+
+  function renderAvisoCard(aviso) {
+    if (_cardAtivo) return;
+    _cardAtivo = true;
+    _avisoAtualId = aviso.id;
+
+    const t = TIPOS[aviso.tipo] || { bg: '#f3f4f6', color: '#374151' };
+
+    const card = document.createElement('div');
+    card.id = 'avisoFloatCard';
+    card.className = 'aviso-float-card';
+    card.innerHTML = `
+      <div class="aviso-float-topbar" style="background:${t.color};"></div>
+      <div class="aviso-float-inner">
+        <div class="aviso-float-head">
+          <span class="aviso-float-tipo-badge" style="background:${t.bg};color:${t.color};">${aviso.tipo}</span>
+          <button class="aviso-float-x" id="avisoFloatX">&times;</button>
+        </div>
+        <div class="aviso-float-titulo">${_esc(aviso.titulo)}</div>
+        ${aviso.corpo ? `<div class="aviso-float-corpo">${_esc(aviso.corpo)}</div>` : ''}
+        <div class="aviso-float-footer">
+          ${aviso.link ? `<a href="${_esc(aviso.link)}" target="_blank" class="aviso-float-link">Saiba mais</a>` : '<span></span>'}
+          <button class="aviso-float-entendi" id="avisoFloatEntendi" style="background:${t.color};">Entendi</button>
+        </div>
+      </div>`;
+
+    document.body.appendChild(card);
+    document.getElementById('avisoFloatX').addEventListener('click', fecharCard);
+    document.getElementById('avisoFloatEntendi').addEventListener('click', () => marcarLido(aviso.id));
+  }
+
+  function _esc(s) {
+    return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  async function fetchAvisoProximo() {
+    if (_cardAtivo) return;
+    try {
+      const r = await fetch('/api/avisos/proximo');
+      const d = await r.json();
+      if (d.aviso) renderAvisoCard(d.aviso);
+    } catch(e) {}
+  }
+
+  // Aguarda 3s para não atrapalhar o carregamento inicial
+  setTimeout(fetchAvisoProximo, 3000);
+  setInterval(fetchAvisoProximo, 60000);
 })();
 </script>
 {% endif %}

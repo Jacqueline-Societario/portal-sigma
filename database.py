@@ -294,6 +294,30 @@ def init_db():
         atualizado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY (user_id) REFERENCES users(id)
     )''')
+    conn.execute('''CREATE TABLE IF NOT EXISTS avisos (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        titulo TEXT NOT NULL,
+        corpo TEXT DEFAULT '',
+        tipo TEXT DEFAULT 'aviso',
+        link TEXT DEFAULT '',
+        data_expiracao TEXT DEFAULT NULL,
+        ativo INTEGER DEFAULT 1,
+        rodizio INTEGER DEFAULT 1,
+        criado_por INTEGER DEFAULT NULL,
+        criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        atualizado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (criado_por) REFERENCES users(id)
+    )''')
+    conn.execute('''CREATE TABLE IF NOT EXISTS avisos_usuarios (
+        aviso_id INTEGER NOT NULL,
+        user_id INTEGER NOT NULL,
+        status TEXT DEFAULT 'nao_lido',
+        exibicoes_hoje INTEGER DEFAULT 0,
+        ultima_exibicao_data TEXT DEFAULT NULL,
+        PRIMARY KEY (aviso_id, user_id),
+        FOREIGN KEY (aviso_id) REFERENCES avisos(id),
+        FOREIGN KEY (user_id) REFERENCES users(id)
+    )''')
 
     conn.commit()
     conn.close()
@@ -480,6 +504,30 @@ def add_coluna_se_necessario():
             atualizado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             FOREIGN KEY (user_id) REFERENCES users(id)
         )''',
+        '''CREATE TABLE IF NOT EXISTS avisos (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            titulo TEXT NOT NULL,
+            corpo TEXT DEFAULT '',
+            tipo TEXT DEFAULT 'aviso',
+            link TEXT DEFAULT '',
+            data_expiracao TEXT DEFAULT NULL,
+            ativo INTEGER DEFAULT 1,
+            rodizio INTEGER DEFAULT 1,
+            criado_por INTEGER DEFAULT NULL,
+            criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            atualizado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (criado_por) REFERENCES users(id)
+        )''',
+        '''CREATE TABLE IF NOT EXISTS avisos_usuarios (
+            aviso_id INTEGER NOT NULL,
+            user_id INTEGER NOT NULL,
+            status TEXT DEFAULT 'nao_lido',
+            exibicoes_hoje INTEGER DEFAULT 0,
+            ultima_exibicao_data TEXT DEFAULT NULL,
+            PRIMARY KEY (aviso_id, user_id),
+            FOREIGN KEY (aviso_id) REFERENCES avisos(id),
+            FOREIGN KEY (user_id) REFERENCES users(id)
+        )''',
     ]
     for sql in migracoes:
         try:
@@ -612,6 +660,7 @@ TOOLS = {
     'conferencia':      'Conferência de Contrato',
     'movimentacao':     'Movimentação de Empresas',
     'cnae':             'Consulta CNAE / Regime Tributário',
+    'avisos':           'Painel de Avisos',
 }
 
 
@@ -1660,5 +1709,178 @@ def get_ultimos_acessos(user_id: int, limit: int = 3) -> list:
     ).fetchall()
     conn.close()
     return [dict(r) for r in rows]
+
+
+# ─── Painel de Avisos ─────────────────────────────────────────────────────────
+
+def criar_aviso(titulo: str, corpo: str, tipo: str, link: str,
+                data_expiracao, rodizio: int, user_id: int) -> int:
+    conn = get_db()
+    cur = conn.execute(
+        '''INSERT INTO avisos (titulo, corpo, tipo, link, data_expiracao, rodizio, criado_por)
+           VALUES (?, ?, ?, ?, ?, ?, ?)''',
+        (titulo, corpo, tipo, link or '', data_expiracao or None, rodizio, user_id)
+    )
+    aviso_id = cur.lastrowid
+    conn.commit()
+    conn.close()
+    criar_notificacoes_para_evento(
+        modulo='avisos',
+        tipo_evento='novo_aviso',
+        titulo=titulo,
+        descricao=corpo[:120] if corpo else '',
+        link_destino='/avisos',
+        excluir_user_id=None,
+    )
+    return aviso_id
+
+
+def listar_avisos() -> list:
+    conn = get_db()
+    rows = conn.execute(
+        '''SELECT a.*,
+                  (SELECT COUNT(*) FROM avisos_usuarios au
+                   WHERE au.aviso_id = a.id AND au.status = 'lido') AS total_lidos
+           FROM avisos a
+           ORDER BY a.criado_em DESC'''
+    ).fetchall()
+    conn.close()
+    return [dict(r) for r in rows]
+
+
+def get_aviso(aviso_id: int) -> dict:
+    conn = get_db()
+    row = conn.execute('SELECT * FROM avisos WHERE id = ?', (aviso_id,)).fetchone()
+    conn.close()
+    return dict(row) if row else None
+
+
+def editar_aviso(aviso_id: int, titulo: str, corpo: str, tipo: str, link: str,
+                 data_expiracao, ativo: int, rodizio: int):
+    conn = get_db()
+    conn.execute(
+        '''UPDATE avisos SET titulo=?, corpo=?, tipo=?, link=?, data_expiracao=?,
+           ativo=?, rodizio=?, atualizado_em=CURRENT_TIMESTAMP WHERE id=?''',
+        (titulo, corpo, tipo, link or '', data_expiracao or None, ativo, rodizio, aviso_id)
+    )
+    conn.commit()
+    conn.close()
+
+
+def deletar_aviso(aviso_id: int):
+    conn = get_db()
+    conn.execute('DELETE FROM avisos_usuarios WHERE aviso_id = ?', (aviso_id,))
+    conn.execute('DELETE FROM avisos WHERE id = ?', (aviso_id,))
+    conn.commit()
+    conn.close()
+
+
+def toggle_aviso(aviso_id: int, campo: str, valor: int):
+    """Alterna ativo ou rodizio. campo deve ser 'ativo' ou 'rodizio'."""
+    if campo not in ('ativo', 'rodizio'):
+        return
+    conn = get_db()
+    conn.execute(
+        f'UPDATE avisos SET {campo}=?, atualizado_em=CURRENT_TIMESTAMP WHERE id=?',
+        (valor, aviso_id)
+    )
+    conn.commit()
+    conn.close()
+
+
+_PRIORIDADE_AVISOS = ['urgente', 'prazo', 'importante', 'aviso', 'procedimento', 'sistema', 'dica']
+
+
+def get_aviso_proximo(user_id: int) -> dict:
+    """
+    Retorna o próximo aviso elegível para o card flutuante do usuário, ou None.
+    Critérios: ativo=1, não expirado, rodizio=1, não lido pelo usuário,
+    não exibido hoje, máx 3 exibições/dia (soma de todos os avisos).
+    Prioridade: urgente → prazo → importante → aviso → procedimento → sistema → dica.
+    """
+    hoje = datetime.now().strftime('%Y-%m-%d')
+    conn = get_db()
+
+    # Verificar total de exibições hoje para este usuário
+    total_hoje = conn.execute(
+        '''SELECT COALESCE(SUM(exibicoes_hoje), 0) FROM avisos_usuarios
+           WHERE user_id = ? AND ultima_exibicao_data = ?''',
+        (user_id, hoje)
+    ).fetchone()[0]
+    if total_hoje >= 3:
+        conn.close()
+        return None
+
+    # Buscar avisos elegíveis
+    rows = conn.execute(
+        '''SELECT a.* FROM avisos a
+           WHERE a.ativo = 1
+             AND a.rodizio = 1
+             AND (a.data_expiracao IS NULL OR a.data_expiracao >= ?)
+             AND a.id NOT IN (
+                 SELECT aviso_id FROM avisos_usuarios
+                 WHERE user_id = ? AND status = 'lido'
+             )
+             AND a.id NOT IN (
+                 SELECT aviso_id FROM avisos_usuarios
+                 WHERE user_id = ? AND ultima_exibicao_data = ?
+             )
+           ORDER BY a.criado_em DESC''',
+        (hoje, user_id, user_id, hoje)
+    ).fetchall()
+    conn.close()
+
+    if not rows:
+        return None
+
+    # Ordenar por prioridade
+    def _prio(row):
+        try:
+            return _PRIORIDADE_AVISOS.index(row['tipo'])
+        except ValueError:
+            return 99
+
+    rows_sorted = sorted(rows, key=_prio)
+    return dict(rows_sorted[0])
+
+
+def marcar_aviso_lido(aviso_id: int, user_id: int):
+    conn = get_db()
+    conn.execute(
+        '''INSERT INTO avisos_usuarios (aviso_id, user_id, status)
+           VALUES (?, ?, 'lido')
+           ON CONFLICT(aviso_id, user_id) DO UPDATE SET status='lido' ''',
+        (aviso_id, user_id)
+    )
+    conn.commit()
+    conn.close()
+
+
+def registrar_exibicao_aviso(aviso_id: int, user_id: int):
+    hoje = datetime.now().strftime('%Y-%m-%d')
+    conn = get_db()
+    existing = conn.execute(
+        'SELECT * FROM avisos_usuarios WHERE aviso_id=? AND user_id=?',
+        (aviso_id, user_id)
+    ).fetchone()
+    if existing:
+        if existing['ultima_exibicao_data'] == hoje:
+            conn.execute(
+                'UPDATE avisos_usuarios SET exibicoes_hoje=exibicoes_hoje+1 WHERE aviso_id=? AND user_id=?',
+                (aviso_id, user_id)
+            )
+        else:
+            conn.execute(
+                'UPDATE avisos_usuarios SET exibicoes_hoje=1, ultima_exibicao_data=? WHERE aviso_id=? AND user_id=?',
+                (hoje, aviso_id, user_id)
+            )
+    else:
+        conn.execute(
+            '''INSERT INTO avisos_usuarios (aviso_id, user_id, exibicoes_hoje, ultima_exibicao_data)
+               VALUES (?, ?, 1, ?)''',
+            (aviso_id, user_id, hoje)
+        )
+    conn.commit()
+    conn.close()
 
 
