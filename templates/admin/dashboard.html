@@ -45,7 +45,7 @@
   .btn-nav:hover { background: rgba(255,255,255,0.28); }
 
   /* Layout */
-  .container { max-width: 1280px; margin: 0 auto; padding: 28px 24px; }
+  .container { max-width: 1600px; margin: 0 auto; padding: 28px 24px; }
 
   /* Section */
   .section-title {
@@ -66,23 +66,24 @@
     border-radius: 10px;
     box-shadow: 0 1px 6px rgba(0,0,0,0.08);
     margin-bottom: 32px;
-    overflow: hidden;
+    overflow-x: auto;
   }
-  .perm-table { width: 100%; border-collapse: collapse; }
+  .perm-table { width: 100%; border-collapse: collapse; min-width: 900px; }
   .perm-table th {
     background: #f9f1f1;
     color: #A72C31;
-    font-size: 12px;
+    font-size: 11px;
     font-weight: 700;
     letter-spacing: 0.4px;
     text-transform: uppercase;
-    padding: 11px 16px;
+    padding: 10px 10px;
     text-align: left;
     border-bottom: 1px solid #f0dada;
+    white-space: nowrap;
   }
-  .perm-table th.tool-col { text-align: center; }
+  .perm-table th.tool-col { text-align: center; white-space: normal; }
   .perm-table td {
-    padding: 13px 16px;
+    padding: 12px 10px;
     border-bottom: 1px solid #f5f5f5;
     vertical-align: middle;
     font-size: 14px;
