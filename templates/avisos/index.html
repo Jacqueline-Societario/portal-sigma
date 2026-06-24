@@ -1,6 +1,136 @@
 {% extends 'base.html' %}
 {% block title %}Painel de Avisos{% endblock %}
 
+{# Ponto 2.1 — CSS no bloco correto do portal (injetado dentro do <style> global do base.html) #}
+{# Ponto 2.3 — Inclui as 5 classes faltantes: .page-header, .page-title, .page-desc, .card, .table #}
+{% block extra_styles %}
+/* ── Layout da página ──────────────────────────────────── */
+.page-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  margin-bottom: 24px;
+  gap: 16px;
+}
+.page-title {
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--text);
+  line-height: 1.2;
+}
+.page-desc {
+  font-size: 13px;
+  color: var(--muted);
+  margin-top: 4px;
+}
+
+/* ── Card container ────────────────────────────────────── */
+.card {
+  background: var(--white);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  overflow: hidden;
+}
+
+/* ── Tabela ────────────────────────────────────────────── */
+.av-table { width: 100%; border-collapse: collapse; }
+.av-table th {
+  background: #faf7f5;
+  color: var(--sigma-red);
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .5px;
+  padding: 11px 16px;
+  text-align: left;
+  border-bottom: 1px solid var(--border);
+  white-space: nowrap;
+}
+.av-table th.center { text-align: center; }
+.av-table td {
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border);
+  vertical-align: middle;
+  font-size: 14px;
+}
+.av-table tr:last-child td { border-bottom: none; }
+.av-table tr:hover td { background: #fdf8f8; }
+
+/* ── Badge de tipo ─────────────────────────────────────── */
+.aviso-tipo-badge {
+  display: inline-block;
+  padding: 2px 9px;
+  border-radius: 99px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .4px;
+}
+
+/* ── Toggle switch ─────────────────────────────────────── */
+.toggle-switch { position: relative; display: inline-block; width: 36px; height: 20px; }
+.toggle-switch input { opacity: 0; width: 0; height: 0; }
+.toggle-slider {
+  position: absolute; cursor: pointer;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: #ccc; border-radius: 20px; transition: .2s;
+}
+.toggle-slider:before {
+  position: absolute; content: '';
+  height: 14px; width: 14px;
+  left: 3px; bottom: 3px;
+  background: white; border-radius: 50%; transition: .2s;
+}
+.toggle-switch input:checked + .toggle-slider { background: var(--sigma-red); }
+.toggle-switch input:checked + .toggle-slider:before { transform: translateX(16px); }
+
+/* ── Modal ─────────────────────────────────────────────── */
+.modal-overlay {
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,.45);
+  display: flex; align-items: center; justify-content: center;
+  z-index: 9000;
+}
+.modal-box {
+  background: var(--white);
+  border-radius: 14px;
+  width: 92%; max-width: 520px;
+  box-shadow: 0 8px 40px rgba(0,0,0,.18);
+}
+.modal-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 18px 22px 14px;
+  border-bottom: 1px solid var(--border);
+  font-weight: 700; font-size: 16px;
+}
+.modal-close {
+  background: none; border: none; font-size: 22px;
+  cursor: pointer; color: var(--muted);
+}
+.modal-close:hover { color: var(--text); }
+.modal-body { padding: 20px 22px; display: flex; flex-direction: column; gap: 14px; }
+.modal-footer {
+  padding: 14px 22px 18px;
+  display: flex; justify-content: flex-end; gap: 10px;
+  border-top: 1px solid var(--border);
+}
+.form-group { display: flex; flex-direction: column; gap: 5px; }
+.form-label { font-size: 13px; font-weight: 600; color: var(--text); }
+.form-control {
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  font-size: 14px;
+  background: var(--bg);
+  color: var(--text);
+  outline: none;
+  transition: border-color .15s;
+}
+.form-control:focus { border-color: var(--sigma-red); }
+{% endblock %}
+
+{# Ponto 2.2 — <style> removido do content. Ponto 2.4 — btn-outline no lugar de btn-secondary #}
 {% block content %}
 <div class="page-header">
   <div>
@@ -8,20 +138,20 @@
     <p class="page-desc">Comunicados internos para a equipe do Societário.</p>
   </div>
   <button class="btn btn-primary" id="btnNovoAviso">
-    <i data-lucide="plus" style="width:15px;height:15px;margin-right:6px;"></i>Novo Aviso
+    <svg data-lucide="plus" style="width:15px;height:15px;"></svg>Novo Aviso
   </button>
 </div>
 
 <!-- Tabela de avisos -->
-<div class="card" style="margin-top:20px;">
+<div class="card" style="margin-top:8px;">
   <div style="overflow-x:auto;">
-    <table class="table" id="tabelaAvisos">
+    <table class="av-table" id="tabelaAvisos">
       <thead>
         <tr>
           <th>Tipo</th>
           <th>Título</th>
-          <th style="text-align:center;">Ativo</th>
-          <th style="text-align:center;">Rodízio</th>
+          <th class="center">Ativo</th>
+          <th class="center">Rodízio</th>
           <th>Expira em</th>
           <th>Criado em</th>
           <th>Ações</th>
@@ -36,7 +166,7 @@
 
 <!-- Modal criar/editar -->
 <div id="modalAviso" class="modal-overlay" style="display:none;">
-  <div class="modal-box" style="max-width:520px;">
+  <div class="modal-box">
     <div class="modal-header">
       <span id="modalTitulo">Novo Aviso</span>
       <button class="modal-close" id="btnFecharModal">&times;</button>
@@ -87,69 +217,22 @@
       </div>
     </div>
     <div class="modal-footer">
-      <button class="btn btn-secondary" id="btnCancelar">Cancelar</button>
+      {# Ponto 2.4 — btn-outline no lugar de btn-secondary #}
+      <button class="btn btn-outline" id="btnCancelar">Cancelar</button>
       <button class="btn btn-primary" id="btnSalvar">Salvar</button>
     </div>
   </div>
 </div>
 
-<style>
-  .aviso-tipo-badge {
-    display: inline-block;
-    padding: 2px 9px;
-    border-radius: 99px;
-    font-size: 11px;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: .4px;
-  }
-  .toggle-switch { position:relative; display:inline-block; width:36px; height:20px; }
-  .toggle-switch input { opacity:0; width:0; height:0; }
-  .toggle-slider {
-    position:absolute; cursor:pointer; top:0; left:0; right:0; bottom:0;
-    background:#ccc; border-radius:20px; transition:.2s;
-  }
-  .toggle-slider:before {
-    position:absolute; content:''; height:14px; width:14px;
-    left:3px; bottom:3px; background:white; border-radius:50%; transition:.2s;
-  }
-  .toggle-switch input:checked + .toggle-slider { background:var(--primary, #A72C31); }
-  .toggle-switch input:checked + .toggle-slider:before { transform:translateX(16px); }
-  .modal-overlay {
-    position:fixed; inset:0; background:rgba(0,0,0,.45);
-    display:flex; align-items:center; justify-content:center; z-index:9000;
-  }
-  .modal-box {
-    background:var(--surface, #fff); border-radius:12px;
-    width:92%; box-shadow:0 8px 40px rgba(0,0,0,.18);
-  }
-  .modal-header {
-    display:flex; align-items:center; justify-content:space-between;
-    padding:18px 22px 14px; border-bottom:1px solid var(--border,#e5e7eb);
-    font-weight:700; font-size:16px;
-  }
-  .modal-close { background:none; border:none; font-size:22px; cursor:pointer; color:var(--muted); }
-  .modal-body { padding:20px 22px; display:flex; flex-direction:column; gap:14px; }
-  .modal-footer { padding:14px 22px 18px; display:flex; justify-content:flex-end; gap:10px; border-top:1px solid var(--border,#e5e7eb); }
-  .form-group { display:flex; flex-direction:column; gap:5px; }
-  .form-label { font-size:13px; font-weight:600; color:var(--text,#333); }
-  .form-control {
-    padding:8px 10px; border:1px solid var(--border,#d1d5db);
-    border-radius:7px; font-size:14px; background:var(--bg,#fff);
-    color:var(--text,#333); outline:none; transition:border-color .15s;
-  }
-  .form-control:focus { border-color:var(--primary,#A72C31); }
-</style>
-
 <script>
 const TIPO_COR = {
-  urgente:    { bg:'#fee2e2', color:'#b91c1c' },
-  importante: { bg:'#ffedd5', color:'#ea580c' },
-  aviso:      { bg:'#fef9c3', color:'#d97706' },
-  dica:       { bg:'#dcfce7', color:'#16a34a' },
-  sistema:    { bg:'#dbeafe', color:'#2563eb' },
+  urgente:     { bg:'#fee2e2', color:'#b91c1c' },
+  importante:  { bg:'#ffedd5', color:'#ea580c' },
+  aviso:       { bg:'#fef9c3', color:'#d97706' },
+  dica:        { bg:'#dcfce7', color:'#16a34a' },
+  sistema:     { bg:'#dbeafe', color:'#2563eb' },
   procedimento:{ bg:'#ede9fe', color:'#7c3aed' },
-  prazo:      { bg:'#fce7f3', color:'#db2777' },
+  prazo:       { bg:'#fce7f3', color:'#db2777' },
 };
 
 function tipoBadge(tipo) {
@@ -185,11 +268,12 @@ async function carregarAvisos() {
         <td style="font-size:13px;color:var(--muted);">${a.data_expiracao || '—'}</td>
         <td style="font-size:12px;color:var(--muted);">${(a.criado_em||'').slice(0,10)}</td>
         <td>
-          <button class="btn btn-sm btn-secondary" onclick="abrirEditar(${a.id})" title="Editar">
-            <i data-lucide="pencil" style="width:13px;height:13px;"></i>
+          {# Ponto 2.5 — btn-outline no lugar de btn-secondary no JS #}
+          <button class="btn btn-sm btn-outline" onclick="abrirEditar(${a.id})" title="Editar">
+            <svg data-lucide="pencil" style="width:13px;height:13px;"></svg>
           </button>
-          <button class="btn btn-sm" style="background:#fee2e2;color:#b91c1c;margin-left:4px;" onclick="excluir(${a.id},'${_esc(a.titulo)}')" title="Excluir">
-            <i data-lucide="trash-2" style="width:13px;height:13px;"></i>
+          <button class="btn btn-sm" style="background:#fee2e2;color:#b91c1c;border:1px solid #fca5a5;margin-left:4px;" onclick="excluir(${a.id},'${_esc(a.titulo)}')" title="Excluir">
+            <svg data-lucide="trash-2" style="width:13px;height:13px;"></svg>
           </button>
         </td>
       </tr>
@@ -206,8 +290,8 @@ function _esc(s) {
 
 async function toggleCampo(avisoId, campo, checked) {
   await fetch(`/avisos/api/${avisoId}/toggle`, {
-    method:'POST',
-    headers:{'Content-Type':'application/json'},
+    method: 'POST',
+    headers: {'Content-Type':'application/json'},
     body: JSON.stringify({ campo, valor: checked ? 1 : 0 })
   });
 }
@@ -226,7 +310,7 @@ function abrirModal(aviso=null) {
 }
 
 async function abrirEditar(avisoId) {
-  const r = await fetch(`/avisos/api`);
+  const r = await fetch('/avisos/api');
   const lista = await r.json();
   const aviso = lista.find(a => a.id === avisoId);
   if (aviso) abrirModal(aviso);
@@ -244,7 +328,7 @@ async function salvar() {
     corpo:  document.getElementById('fCorpo').value.trim(),
     link:   document.getElementById('fLink').value.trim(),
     data_expiracao: document.getElementById('fExpiracao').value || null,
-    ativo:  document.getElementById('fAtivo').checked ? 1 : 0,
+    ativo:   document.getElementById('fAtivo').checked ? 1 : 0,
     rodizio: document.getElementById('fRodizio').checked ? 1 : 0,
   };
   if (!payload.titulo) { alert('Informe o título.'); return; }
@@ -252,7 +336,7 @@ async function salvar() {
   const meth = id ? 'PUT' : 'POST';
   const r = await fetch(url, { method:meth, headers:{'Content-Type':'application/json'}, body:JSON.stringify(payload) });
   if (r.ok) { fecharModal(); carregarAvisos(); }
-  else { const d=await r.json(); alert(d.erro || 'Erro ao salvar.'); }
+  else { const d = await r.json(); alert(d.erro || 'Erro ao salvar.'); }
 }
 
 async function excluir(avisoId, titulo) {
