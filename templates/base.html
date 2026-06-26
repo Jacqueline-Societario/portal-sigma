@@ -401,6 +401,28 @@
       background: rgba(0,0,0,0.45);
       z-index: 299; cursor: pointer;
     }
+    /* ── Touch (phone + tablet): scroll pelo documento ──────────────────── */
+    @media (pointer: coarse) {
+      html { height: auto; }
+      body {
+        height: auto;
+        min-height: 100dvh;
+        overflow-x: hidden;
+        overflow-y: auto;
+      }
+      .main-wrap {
+        height: auto;
+        min-height: 100dvh;
+        overflow: visible;
+      }
+      .page-content {
+        height: auto;
+        overflow: visible;
+        overflow-x: hidden;
+        padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 28px);
+      }
+    }
+
     /* ── Mobile ≤ 768px ───────────────────────────────────────────────────── */
     @media (max-width: 768px) {
       .sidebar-mobile-backdrop.open { display: block; }
