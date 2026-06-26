@@ -506,6 +506,17 @@ def api_avisos_ler(aviso_id):
     return jsonify({'ok': True})
 
 
+@app.route('/api/avisos/<int:aviso_id>/ver')
+def api_avisos_ver(aviso_id):
+    if login_obrigatorio():
+        return jsonify({'aviso': None}), 200
+    uid = session.get('user_id')
+    aviso = database.get_aviso_completo_para_user(aviso_id, uid)
+    if aviso:
+        database.marcar_aviso_visto(aviso_id, uid)
+    return jsonify({'aviso': aviso})
+
+
 @app.route('/api/dashboard-stats')
 def api_dashboard_stats():
     """KPIs para os cards da Home."""

@@ -337,11 +337,6 @@
       border-radius: 99px; font-size: 10px; font-weight: 700;
       text-transform: uppercase; letter-spacing: .4px; flex-shrink: 0;
     }
-    .aviso-float-x {
-      background: none; border: none; cursor: pointer; color: var(--muted, #888);
-      font-size: 18px; line-height: 1; padding: 0; flex-shrink: 0;
-    }
-    .aviso-float-x:hover { color: var(--text, #333); }
     .aviso-float-titulo {
       font-size: 14px; font-weight: 700; color: var(--text, #222);
       line-height: 1.4; margin-bottom: 6px;
@@ -359,6 +354,13 @@
       transition: opacity .15s;
     }
     .aviso-float-entendi:hover { opacity: .87; }
+    .aviso-novo-badge {
+      display: inline-block; padding: 1px 7px;
+      background: #A72C31; color: #fff;
+      border-radius: 99px; font-size: 9px; font-weight: 800;
+      text-transform: uppercase; letter-spacing: .5px;
+      flex-shrink: 0; margin-left: 6px;
+    }
 
     /* ── Utilitários globais ─────────────────────────────────────────────── */
     .alert {
@@ -677,8 +679,24 @@
       el.addEventListener('click', function() {
         const id   = parseInt(el.dataset.id);
         const link = el.dataset.link;
-        fetch('/api/notificacoes/' + id + '/ler', { method: 'POST' }).then(function() { fetchNotifs(); });
-        if (link) window.location.href = link;
+        fetch('/api/notificacoes/' + id + '/ler', { method: 'POST' })
+          .then(function() { fetchNotifs(); });
+        if (link && /^\/api\/avisos\/\d+\/ver$/.test(link)) {
+          dropdown.classList.remove('open');
+          fetch(link)
+            .then(function(r) { return r.ok ? r.json() : null; })
+            .then(function(d) {
+              if (d && d.aviso) {
+                document.dispatchEvent(new CustomEvent('sigma:abrirAviso', {
+                  detail: { aviso: d.aviso, notificacao_id: id }
+                }));
+              }
+            })
+            .catch(function() {});
+        } else if (link && link !== '/avisos') {
+          window.location.href = link;
+        }
+        // link === '/avisos' ou vazio → silêncio total (Decisão #2 e #6)
       });
     });
   }
@@ -746,6 +764,7 @@
 
   fetchNotifs();
   setInterval(fetchNotifs, 60000);
+  window._sigmaNotifsRefresh = fetchNotifs;
 
   // ── Extensão _labelModulo para avisos ────────────────────────────────────
   const _labelModuloOrig = typeof _labelModulo === 'function' ? _labelModulo : null;
@@ -759,80 +778,157 @@
 <script>
 (function() {
   const TIPOS = {
-    urgente:     { bg: '#fee2e2', color: '#b91c1c' },
-    importante:  { bg: '#ffedd5', color: '#ea580c' },
-    aviso:       { bg: '#fef9c3', color: '#d97706' },
-    dica:        { bg: '#dcfce7', color: '#16a34a' },
-    sistema:     { bg: '#dbeafe', color: '#2563eb' },
-    procedimento:{ bg: '#ede9fe', color: '#7c3aed' },
-    prazo:       { bg: '#fce7f3', color: '#db2777' },
+    urgente:      { bg: '#fee2e2', color: '#b91c1c' },
+    importante:   { bg: '#ffedd5', color: '#ea580c' },
+    aviso:        { bg: '#fef9c3', color: '#d97706' },
+    dica:         { bg: '#dcfce7', color: '#16a34a' },
+    sistema:      { bg: '#dbeafe', color: '#2563eb' },
+    procedimento: { bg: '#ede9fe', color: '#7c3aed' },
+    prazo:        { bg: '#fce7f3', color: '#db2777' },
   };
 
-  let _cardAtivo = false;
-  let _avisoAtualId = null;
+  const _SLOTS = [10, 13, 16];  // horários de Brasília
+  let _cardAtivo          = false;
+  let _avisoAtualId       = null;
+  let _avisoNotificacaoId = null;
+  let _autoDismissTimer   = null;
 
+  // ── Tempo Brasília (UTC-3, sem horário de verão desde 2019) ──────────────
+  function _horaBrasilia() {
+    return parseInt(new Intl.DateTimeFormat('pt-BR', {
+      timeZone: 'America/Sao_Paulo', hour: 'numeric', hour12: false
+    }).format(new Date()), 10);
+  }
+  function _minutoBrasilia() {
+    return parseInt(new Intl.DateTimeFormat('pt-BR', {
+      timeZone: 'America/Sao_Paulo', minute: 'numeric'
+    }).format(new Date()), 10);
+  }
+  function _dataHojeBrasilia() {
+    return new Intl.DateTimeFormat('sv-SE', {
+      timeZone: 'America/Sao_Paulo'
+    }).format(new Date());  // retorna YYYY-MM-DD
+  }
+
+  // ── Controle de slots (localStorage por dia) ─────────────────────────────
+  function _slotKey(hora) {
+    return 'sigma_slot_' + _dataHojeBrasilia() + '_' + hora;
+  }
+  function _marcarSlotAtual() {
+    const h = _horaBrasilia();
+    if (_SLOTS.includes(h)) localStorage.setItem(_slotKey(h), '1');
+  }
+  function _deveDispararSlot() {
+    const h = _horaBrasilia();
+    const m = _minutoBrasilia();
+    return _SLOTS.includes(h) && m < 15 && !localStorage.getItem(_slotKey(h));
+  }
+
+  // ── Fechamento do card (centraliza tudo: Entendi + auto-dismiss + sino) ──
   function fecharCard() {
+    clearTimeout(_autoDismissTimer);
+    _autoDismissTimer = null;
+
+    const notifId = _avisoNotificacaoId;  // capturar antes de limpar
+    _cardAtivo          = false;
+    _avisoAtualId       = null;
+    _avisoNotificacaoId = null;
+
+    if (notifId) {
+      fetch('/api/notificacoes/' + notifId + '/ler', { method: 'POST' })
+        .then(function() {
+          if (window._sigmaNotifsRefresh) window._sigmaNotifsRefresh();
+        });
+    }
+
     const c = document.getElementById('avisoFloatCard');
     if (!c) return;
     c.style.transition = 'opacity .2s, transform .2s';
-    c.style.opacity = '0';
-    c.style.transform = 'translateY(16px)';
-    setTimeout(() => { c && c.remove(); }, 220);
-    _cardAtivo = false;
-    _avisoAtualId = null;
+    c.style.opacity    = '0';
+    c.style.transform  = 'translateY(16px)';
+    setTimeout(function() { c && c.remove(); }, 220);
   }
 
-  async function marcarLido(avisoId) {
-    await fetch(`/api/avisos/${avisoId}/ler`, { method: 'POST' });
-    fecharCard();
+  function _esc(s) {
+    return String(s || '')
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
   }
 
+  // ── Renderização do card ─────────────────────────────────────────────────
   function renderAvisoCard(aviso) {
     if (_cardAtivo) return;
-    _cardAtivo = true;
-    _avisoAtualId = aviso.id;
+    _cardAtivo          = true;
+    _avisoAtualId       = aviso.id;
+    _avisoNotificacaoId = aviso.notificacao_id || null;
 
-    const t = TIPOS[aviso.tipo] || { bg: '#f3f4f6', color: '#374151' };
+    const t        = TIPOS[aviso.tipo] || { bg: '#f3f4f6', color: '#374151' };
+    const badgeNovo = aviso.is_novo
+      ? '<span class="aviso-novo-badge">NOVO</span>'
+      : '';
 
     const card = document.createElement('div');
-    card.id = 'avisoFloatCard';
+    card.id        = 'avisoFloatCard';
     card.className = 'aviso-float-card';
     card.innerHTML = `
       <div class="aviso-float-topbar" style="background:${t.color};"></div>
       <div class="aviso-float-inner">
         <div class="aviso-float-head">
-          <span class="aviso-float-tipo-badge" style="background:${t.bg};color:${t.color};">${aviso.tipo}</span>
-          <button class="aviso-float-x" id="avisoFloatX">&times;</button>
+          <span class="aviso-float-tipo-badge"
+                style="background:${t.bg};color:${t.color};">${_esc(aviso.tipo)}</span>
+          ${badgeNovo}
         </div>
         <div class="aviso-float-titulo">${_esc(aviso.titulo)}</div>
-        ${aviso.corpo ? `<div class="aviso-float-corpo">${_esc(aviso.corpo)}</div>` : ''}
+        ${aviso.corpo ? `<div class="aviso-float-corpo">${aviso.corpo}</div>` : ''}
         <div class="aviso-float-footer">
-          ${aviso.link ? `<a href="${_esc(aviso.link)}" target="_blank" class="aviso-float-link">Saiba mais</a>` : '<span></span>'}
-          <button class="aviso-float-entendi" id="avisoFloatEntendi" style="background:${t.color};">Entendi</button>
+          ${aviso.link
+            ? `<a href="${_esc(aviso.link)}" target="_blank"
+                  class="aviso-float-link">Saiba mais</a>`
+            : '<span></span>'}
+          <button class="aviso-float-entendi" id="avisoFloatEntendi"
+                  style="background:${t.color};">Entendi</button>
         </div>
       </div>`;
 
     document.body.appendChild(card);
-    document.getElementById('avisoFloatX').addEventListener('click', fecharCard);
-    document.getElementById('avisoFloatEntendi').addEventListener('click', () => marcarLido(aviso.id));
+    // "Entendi" chama fecharCard diretamente — sem função intermediária
+    document.getElementById('avisoFloatEntendi')
+      .addEventListener('click', fecharCard);
+
+    // Auto-dismiss: card some sozinho após 2h (mesmas regras do Entendi)
+    _autoDismissTimer = setTimeout(fecharCard, 2 * 3600 * 1000);
   }
 
-  function _esc(s) {
-    return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-  }
-
+  // ── Fetch do próximo aviso ───────────────────────────────────────────────
   async function fetchAvisoProximo() {
     if (_cardAtivo) return;
     try {
       const r = await fetch('/api/avisos/proximo');
       const d = await r.json();
-      if (d.aviso) renderAvisoCard(d.aviso);
+      if (d.aviso) {
+        _marcarSlotAtual();
+        renderAvisoCard(d.aviso);
+      }
     } catch(e) {}
   }
 
-  // Aguarda 3s para não atrapalhar o carregamento inicial
-  setTimeout(fetchAvisoProximo, 3000);
-  setInterval(fetchAvisoProximo, 60000);
+  // ── Abertura via clique no sino ──────────────────────────────────────────
+  document.addEventListener('sigma:abrirAviso', function(e) {
+    const a = Object.assign({}, e.detail.aviso, {
+      notificacao_id: e.detail.notificacao_id
+    });
+    renderAvisoCard(a);
+  });
+
+  // ── Disparo por slots ────────────────────────────────────────────────────
+  // Verificar na abertura da página (caso esteja dentro de um slot)
+  if (_deveDispararSlot()) setTimeout(fetchAvisoProximo, 3000);
+
+  // Verificar a cada 5 minutos
+  setInterval(function() {
+    if (_deveDispararSlot()) fetchAvisoProximo();
+  }, 5 * 60 * 1000);
+
 })();
 </script>
 {% endif %}

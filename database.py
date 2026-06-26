@@ -8,6 +8,8 @@ import random
 import string
 from datetime import datetime, timedelta
 from werkzeug.security import generate_password_hash
+import bleach
+_TAGS_AVISO = ['b', 'strong', 'i', 'em', 'u', 'br', 'p', 'span']
 
 DB_PATH = os.path.join(os.path.dirname(__file__), 'portal.db')
 
@@ -1716,6 +1718,7 @@ def get_ultimos_acessos(user_id: int, limit: int = 3) -> list:
 def criar_aviso(titulo: str, corpo: str, tipo: str, link: str,
                 data_expiracao, rodizio: int, user_id: int) -> int:
     conn = get_db()
+    corpo = bleach.clean(corpo or '', tags=_TAGS_AVISO, attributes={}, strip=True)
     cur = conn.execute(
         '''INSERT INTO avisos (titulo, corpo, tipo, link, data_expiracao, rodizio, criado_por)
            VALUES (?, ?, ?, ?, ?, ?, ?)''',
@@ -1729,7 +1732,7 @@ def criar_aviso(titulo: str, corpo: str, tipo: str, link: str,
         tipo_evento='novo_aviso',
         titulo=titulo,
         descricao=corpo[:120] if corpo else '',
-        link_destino='/avisos',
+        link_destino=f'/api/avisos/{aviso_id}/ver',
         excluir_user_id=None,
     )
     return aviso_id
@@ -1757,6 +1760,7 @@ def get_aviso(aviso_id: int) -> dict:
 
 def editar_aviso(aviso_id: int, titulo: str, corpo: str, tipo: str, link: str,
                  data_expiracao, ativo: int, rodizio: int):
+    corpo = bleach.clean(corpo or '', tags=_TAGS_AVISO, attributes={}, strip=True)
     conn = get_db()
     conn.execute(
         '''UPDATE avisos SET titulo=?, corpo=?, tipo=?, link=?, data_expiracao=?,
@@ -1788,60 +1792,90 @@ def toggle_aviso(aviso_id: int, campo: str, valor: int):
     conn.close()
 
 
-_PRIORIDADE_AVISOS = ['urgente', 'prazo', 'importante', 'aviso', 'procedimento', 'sistema', 'dica']
-
-
 def get_aviso_proximo(user_id: int) -> dict:
     """
     Retorna o próximo aviso elegível para o card flutuante do usuário, ou None.
-    Critérios: ativo=1, não expirado, rodizio=1, não lido pelo usuário,
-    não exibido hoje, máx 3 exibições/dia (soma de todos os avisos).
-    Prioridade: urgente → prazo → importante → aviso → procedimento → sistema → dica.
+    Etapa 1: avisos nunca vistos (novo) — sem limite de 3/dia, prioridade máxima.
+    Etapa 2: rodízio — máx 3/dia, round-robin por ultima_exibicao_data.
+    Retorna dict com is_novo e notificacao_id inclusos.
+    Parâmetros de cada query documentados em linha para evitar dessincronia.
     """
     hoje = datetime.now().strftime('%Y-%m-%d')
     conn = get_db()
 
-    # Verificar total de exibições hoje para este usuário
+    # Etapa 1 — novos (nenhum registro em avisos_usuarios para este usuário)
+    # Params: user_id (notif), hoje (expiracao), user_id (NOT IN)
+    row = conn.execute(
+        '''SELECT a.*,
+                  (SELECT n.id FROM notifications n
+                   WHERE n.user_id = ?
+                     AND n.link_destino = '/api/avisos/' || a.id || '/ver'
+                     AND n.lida = 0
+                   LIMIT 1) AS notificacao_id
+           FROM avisos a
+           WHERE a.ativo = 1
+             AND a.rodizio = 1
+             AND (a.data_expiracao IS NULL OR a.data_expiracao >= ?)
+             AND a.id NOT IN (
+                 SELECT aviso_id FROM avisos_usuarios WHERE user_id = ?
+             )
+           ORDER BY CASE a.tipo
+               WHEN 'urgente'      THEN 0 WHEN 'prazo'        THEN 1
+               WHEN 'importante'   THEN 2 WHEN 'aviso'         THEN 3
+               WHEN 'procedimento' THEN 4 WHEN 'sistema'       THEN 5
+               WHEN 'dica'         THEN 6 ELSE 7 END,
+               a.criado_em DESC
+           LIMIT 1''',
+        (user_id, hoje, user_id)
+    ).fetchone()
+
+    if row:
+        conn.close()
+        result = dict(row)
+        result['is_novo'] = True
+        return result
+
+    # Etapa 2 — rodízio (já vistos, máx 3/dia, round-robin)
     total_hoje = conn.execute(
         '''SELECT COALESCE(SUM(exibicoes_hoje), 0) FROM avisos_usuarios
            WHERE user_id = ? AND ultima_exibicao_data = ?''',
         (user_id, hoje)
     ).fetchone()[0]
+
     if total_hoje >= 3:
         conn.close()
         return None
 
-    # Buscar avisos elegíveis
-    rows = conn.execute(
-        '''SELECT a.* FROM avisos a
+    # Params: user_id (notif), user_id (JOIN), hoje (expiracao), hoje (ultima_exibicao)
+    row = conn.execute(
+        '''SELECT a.*,
+                  (SELECT n.id FROM notifications n
+                   WHERE n.user_id = ?
+                     AND n.link_destino = '/api/avisos/' || a.id || '/ver'
+                     AND n.lida = 0
+                   LIMIT 1) AS notificacao_id
+           FROM avisos a
+           LEFT JOIN avisos_usuarios au ON au.aviso_id = a.id AND au.user_id = ?
            WHERE a.ativo = 1
              AND a.rodizio = 1
              AND (a.data_expiracao IS NULL OR a.data_expiracao >= ?)
-             AND a.id NOT IN (
-                 SELECT aviso_id FROM avisos_usuarios
-                 WHERE user_id = ? AND status = 'lido'
-             )
-             AND a.id NOT IN (
-                 SELECT aviso_id FROM avisos_usuarios
-                 WHERE user_id = ? AND ultima_exibicao_data = ?
-             )
-           ORDER BY a.criado_em DESC''',
-        (hoje, user_id, user_id, hoje)
-    ).fetchall()
+             AND (au.ultima_exibicao_data IS NULL OR au.ultima_exibicao_data < ?)
+           ORDER BY CASE a.tipo
+               WHEN 'urgente'      THEN 0 WHEN 'prazo'        THEN 1
+               WHEN 'importante'   THEN 2 WHEN 'aviso'         THEN 3
+               WHEN 'procedimento' THEN 4 WHEN 'sistema'       THEN 5
+               WHEN 'dica'         THEN 6 ELSE 7 END,
+               COALESCE(au.ultima_exibicao_data, '0000-00-00') ASC
+           LIMIT 1''',
+        (user_id, user_id, hoje, hoje)
+    ).fetchone()
+
     conn.close()
-
-    if not rows:
+    if not row:
         return None
-
-    # Ordenar por prioridade
-    def _prio(row):
-        try:
-            return _PRIORIDADE_AVISOS.index(row['tipo'])
-        except ValueError:
-            return 99
-
-    rows_sorted = sorted(rows, key=_prio)
-    return dict(rows_sorted[0])
+    result = dict(row)
+    result['is_novo'] = False
+    return result
 
 
 def marcar_aviso_lido(aviso_id: int, user_id: int):
@@ -1880,6 +1914,55 @@ def registrar_exibicao_aviso(aviso_id: int, user_id: int):
                VALUES (?, ?, 1, ?)''',
             (aviso_id, user_id, hoje)
         )
+    conn.commit()
+    conn.close()
+
+
+def get_aviso_completo_para_user(aviso_id: int, user_id: int) -> dict:
+    """
+    Retorna aviso com is_novo e notificacao_id para abertura via sino.
+    Filtra ativo=1 — aviso desativado retorna None (card não abre).
+    Não filtra por rodizio — sino pode abrir qualquer aviso ativo.
+    """
+    conn = get_db()
+    row = conn.execute(
+        '''SELECT a.*,
+                  CASE WHEN au.aviso_id IS NULL THEN 1 ELSE 0 END AS is_novo,
+                  (SELECT n.id FROM notifications n
+                   WHERE n.user_id = ?
+                     AND n.link_destino = '/api/avisos/' || a.id || '/ver'
+                     AND n.lida = 0
+                   LIMIT 1) AS notificacao_id
+           FROM avisos a
+           LEFT JOIN avisos_usuarios au ON au.aviso_id = a.id AND au.user_id = ?
+           WHERE a.id = ? AND a.ativo = 1''',
+        (user_id, user_id, aviso_id)
+    ).fetchone()
+    conn.close()
+    if not row:
+        return None
+    result = dict(row)
+    result['is_novo'] = bool(result['is_novo'])
+    return result
+
+
+def marcar_aviso_visto(aviso_id: int, user_id: int):
+    """
+    Marca aviso como visto pela abertura via sino.
+    Remove de 'novo' (insere linha em avisos_usuarios) sem incrementar
+    exibicoes_hoje — não consome o limite diário do rodízio.
+    INSERT OR IGNORE: se já existe registro, não altera nada (idempotente).
+    ultima_exibicao_data=hoje exclui o aviso do rodízio automático do mesmo dia
+    (Decisão #9 — intencional: usuária já viu, não precisa ver de novo hoje).
+    """
+    hoje = datetime.now().strftime('%Y-%m-%d')
+    conn = get_db()
+    conn.execute(
+        '''INSERT OR IGNORE INTO avisos_usuarios
+               (aviso_id, user_id, exibicoes_hoje, ultima_exibicao_data)
+           VALUES (?, ?, 0, ?)''',
+        (aviso_id, user_id, hoje)
+    )
     conn.commit()
     conn.close()
 
