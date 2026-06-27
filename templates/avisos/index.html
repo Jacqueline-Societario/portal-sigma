@@ -85,6 +85,33 @@
 .toggle-switch input:checked + .toggle-slider { background: var(--sigma-red); }
 .toggle-switch input:checked + .toggle-slider:before { transform: translateX(16px); }
 
+/* ── Editor de corpo ───────────────────────────────────── */
+.corpo-toolbar {
+  display: flex; gap: 4px; margin-bottom: 4px;
+}
+.corpo-toolbar button {
+  min-width: 28px; padding: 3px 7px;
+  border: 1px solid var(--border); border-radius: 4px;
+  background: var(--white); cursor: pointer;
+  font-size: 13px; font-weight: 700; color: var(--text);
+  line-height: 1.4; transition: background .12s, color .12s;
+}
+.corpo-toolbar button:hover { background: #f3f3f3; }
+.corpo-toolbar button.ativo { background: #A72C31; color: #fff; border-color: #A72C31; }
+.corpo-editor {
+  min-height: 88px; max-height: 180px; overflow-y: auto;
+  padding: 8px 10px;
+  border: 1px solid var(--border); border-radius: var(--radius-sm);
+  font-size: 14px; line-height: 1.55;
+  background: var(--bg); color: var(--text);
+  outline: none; transition: border-color .15s;
+}
+.corpo-editor:focus { border-color: #A72C31; }
+.corpo-editor:empty:before {
+  content: attr(data-placeholder);
+  color: var(--muted, #aaa); pointer-events: none;
+}
+
 /* ── Modal ─────────────────────────────────────────────── */
 .modal-overlay {
   position: fixed; inset: 0;
@@ -194,7 +221,13 @@
 
       <div class="form-group">
         <label class="form-label">Corpo</label>
-        <textarea class="form-control" id="fCorpo" rows="4" placeholder="Detalhes do comunicado (opcional)..."></textarea>
+        <div class="corpo-toolbar" id="corpoToolbar">
+          <button type="button" data-cmd="bold"      title="Negrito (Ctrl+B)"><b>N</b></button>
+          <button type="button" data-cmd="italic"    title="Itálico (Ctrl+I)"><i>I</i></button>
+          <button type="button" data-cmd="underline" title="Sublinhado (Ctrl+U)"><u>S</u></button>
+        </div>
+        <div class="corpo-editor" id="fCorpo" contenteditable="true"
+             data-placeholder="Detalhes do comunicado (opcional)..."></div>
       </div>
 
       <div class="form-group">
@@ -301,7 +334,7 @@ function abrirModal(aviso=null) {
   document.getElementById('modalTitulo').textContent = aviso ? 'Editar Aviso' : 'Novo Aviso';
   document.getElementById('fTitulo').value = aviso ? aviso.titulo : '';
   document.getElementById('fTipo').value = aviso ? aviso.tipo : 'aviso';
-  document.getElementById('fCorpo').value = aviso ? (aviso.corpo||'') : '';
+  document.getElementById('fCorpo').innerHTML = aviso ? (aviso.corpo||'') : '';
   document.getElementById('fLink').value = aviso ? (aviso.link||'') : '';
   document.getElementById('fExpiracao').value = aviso ? (aviso.data_expiracao||'') : '';
   document.getElementById('fAtivo').checked = aviso ? Boolean(aviso.ativo) : true;
@@ -325,7 +358,7 @@ async function salvar() {
   const payload = {
     titulo: document.getElementById('fTitulo').value.trim(),
     tipo:   document.getElementById('fTipo').value,
-    corpo:  document.getElementById('fCorpo').value.trim(),
+    corpo:  document.getElementById('fCorpo').innerHTML.trim(),
     link:   document.getElementById('fLink').value.trim(),
     data_expiracao: document.getElementById('fExpiracao').value || null,
     ativo:   document.getElementById('fAtivo').checked ? 1 : 0,
@@ -350,6 +383,38 @@ document.getElementById('btnFecharModal').addEventListener('click', fecharModal)
 document.getElementById('btnCancelar').addEventListener('click', fecharModal);
 document.getElementById('btnSalvar').addEventListener('click', salvar);
 document.getElementById('modalAviso').addEventListener('click', e => { if (e.target===e.currentTarget) fecharModal(); });
+
+// ── Editor rico ───────────────────────────────────────────────────────────
+(function() {
+  const editor = document.getElementById('fCorpo');
+
+  // Toolbar: execCommand em bold / italic / underline
+  document.getElementById('corpoToolbar').addEventListener('mousedown', function(e) {
+    const btn = e.target.closest('[data-cmd]');
+    if (!btn) return;
+    e.preventDefault(); // mantém foco no editor
+    document.execCommand(btn.dataset.cmd, false, null);
+    editor.focus();
+    _atualizarToolbar();
+  });
+
+  // Enter → <br><br> (evita <div> que não está no bleach)
+  editor.addEventListener('keydown', function(e) {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      document.execCommand('insertHTML', false, '<br><br>');
+    }
+  });
+
+  // Refletir estado bold/italic/underline nos botões
+  function _atualizarToolbar() {
+    ['bold', 'italic', 'underline'].forEach(function(cmd) {
+      const btn = document.querySelector('#corpoToolbar [data-cmd="' + cmd + '"]');
+      if (btn) btn.classList.toggle('ativo', document.queryCommandState(cmd));
+    });
+  }
+  document.addEventListener('selectionchange', _atualizarToolbar);
+})();
 
 carregarAvisos();
 </script>
