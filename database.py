@@ -1731,7 +1731,7 @@ def criar_aviso(titulo: str, corpo: str, tipo: str, link: str,
         modulo='avisos',
         tipo_evento='novo_aviso',
         titulo=titulo,
-        descricao=corpo[:120] if corpo else '',
+        descricao=bleach.clean(corpo, tags=[], strip=True)[:120] if corpo else '',
         link_destino=f'/api/avisos/{aviso_id}/ver',
         excluir_user_id=None,
     )
