@@ -444,7 +444,7 @@ def verificar_stepup_sensivel():
                     'next': path,
                     'reason': reason,
                     'verify_url': url_for('webauthn.verify_page',
-                                          purpose='stepup', next=path, reason=reason),
+                                          purpose='stepup', next='/admin/', reason=reason),
                 }), 403
 
 

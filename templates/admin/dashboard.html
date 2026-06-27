@@ -635,6 +635,10 @@ function criarUsuario() {
       fecharModais();
       showToast('Usuário criado! Recarregando…');
       setTimeout(() => location.reload(), 1200);
+    } else if (data.stepup_required) {
+      fecharModais();
+      showToast('Verificação de segurança necessária. Redirecionando…', true);
+      setTimeout(() => { window.location.href = data.verify_url || '/webauthn/verify?purpose=stepup&next=/admin/'; }, 1500);
     } else {
       showToast(data.erro || 'Erro ao criar usuário', true);
     }
@@ -665,6 +669,10 @@ function salvarEdicao() {
       fecharModais();
       showToast('Nome atualizado! Recarregando…');
       setTimeout(() => location.reload(), 1200);
+    } else if (data.stepup_required) {
+      fecharModais();
+      showToast('Verificação de segurança necessária. Redirecionando…', true);
+      setTimeout(() => { window.location.href = data.verify_url || '/webauthn/verify?purpose=stepup&next=/admin/'; }, 1500);
     } else {
       showToast(data.erro || 'Erro ao salvar', true);
     }
@@ -686,6 +694,9 @@ function toggleAtivo(userId, ativo, nome) {
     if (data.ok) {
       showToast(ativo ? 'Usuário reativado!' : 'Usuário inativado!');
       setTimeout(() => location.reload(), 1000);
+    } else if (data.stepup_required) {
+      showToast('Verificação de segurança necessária. Redirecionando…', true);
+      setTimeout(() => { window.location.href = data.verify_url || '/webauthn/verify?purpose=stepup&next=/admin/'; }, 1500);
     } else {
       showToast(data.erro || 'Erro ao alterar status', true);
     }
@@ -712,6 +723,10 @@ function executarExcluir() {
       fecharModais();
       showToast('Usuário excluído. Recarregando…');
       setTimeout(() => location.reload(), 1200);
+    } else if (data.stepup_required) {
+      fecharModais();
+      showToast('Verificação de segurança necessária. Redirecionando…', true);
+      setTimeout(() => { window.location.href = data.verify_url || '/webauthn/verify?purpose=stepup&next=/admin/'; }, 1500);
     } else {
       showToast(data.erro || 'Erro ao excluir', true);
     }
@@ -737,6 +752,10 @@ function executarRedefinirSenha() {
     if (data.ok) {
       fecharModais();
       showToast('Senha redefinida para Sigma@2025');
+    } else if (data.stepup_required) {
+      fecharModais();
+      showToast('Verificação de segurança necessária. Redirecionando…', true);
+      setTimeout(() => { window.location.href = data.verify_url || '/webauthn/verify?purpose=stepup&next=/admin/'; }, 1500);
     } else {
       showToast(data.erro || 'Erro ao redefinir senha', true);
     }
