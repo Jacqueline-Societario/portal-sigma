@@ -281,7 +281,7 @@
           },
         };
 
-        const r2 = await fetch('/webauthn/auth-complete', {
+        const r2 = await fetch(`/webauthn/auth-complete?next=${encodeURIComponent(NEXT_URL)}`, {
           method: 'POST',
           headers: {'Content-Type': 'application/json'},
           body: JSON.stringify(credJson),

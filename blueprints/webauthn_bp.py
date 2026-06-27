@@ -75,6 +75,8 @@ def verify_page():
     """
     purpose = request.args.get('purpose', 'login')   # 'login' | 'stepup'
     next_url = request.args.get('next', '/')
+    if not next_url.startswith('/') or next_url.startswith('//'):
+        next_url = '/'
     reason  = request.args.get('reason', '')
 
     # Se login: precisa de user em trânsito
@@ -355,6 +357,8 @@ def auth_complete():
         # Marcar step-up na sessão
         session['_stepup_verified_at'] = datetime.utcnow().isoformat()
         next_url = request.args.get('next') or '/'
+        if not next_url.startswith('/') or next_url.startswith('//'):
+            next_url = '/'
         response_data['redirect'] = next_url
 
     # Criar dispositivo confiável se solicitado
