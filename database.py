@@ -1804,6 +1804,7 @@ def get_aviso_proximo(user_id: int) -> dict:
     conn = get_db()
 
     # Etapa 1 — novos (nenhum registro em avisos_usuarios para este usuário)
+    # Inclui rodizio=0 (pontuais): aparecem uma vez como card e não voltam.
     # Params: user_id (notif), hoje (expiracao), user_id (NOT IN)
     row = conn.execute(
         '''SELECT a.*,
@@ -1814,7 +1815,6 @@ def get_aviso_proximo(user_id: int) -> dict:
                    LIMIT 1) AS notificacao_id
            FROM avisos a
            WHERE a.ativo = 1
-             AND a.rodizio = 1
              AND (a.data_expiracao IS NULL OR a.data_expiracao >= ?)
              AND a.id NOT IN (
                  SELECT aviso_id FROM avisos_usuarios WHERE user_id = ?
@@ -1860,7 +1860,10 @@ def get_aviso_proximo(user_id: int) -> dict:
              AND a.rodizio = 1
              AND (a.data_expiracao IS NULL OR a.data_expiracao >= ?)
              AND (au.ultima_exibicao_data IS NULL OR au.ultima_exibicao_data < ?)
-           ORDER BY CASE a.tipo
+           ORDER BY CASE au.status WHEN 'nao_lido' THEN 0
+                                   WHEN 'lido'     THEN 1
+                                   ELSE 0 END ASC,
+               CASE a.tipo
                WHEN 'urgente'      THEN 0 WHEN 'prazo'        THEN 1
                WHEN 'importante'   THEN 2 WHEN 'aviso'         THEN 3
                WHEN 'procedimento' THEN 4 WHEN 'sistema'       THEN 5
@@ -1890,7 +1893,12 @@ def marcar_aviso_lido(aviso_id: int, user_id: int):
     conn.close()
 
 
-def registrar_exibicao_aviso(aviso_id: int, user_id: int):
+def registrar_exibicao_aviso(aviso_id: int, user_id: int, contar_no_limite: bool = True):
+    """
+    Registra a exibição do card flutuante para o usuário.
+    contar_no_limite=False: cria/atualiza o registro sem incrementar exibicoes_hoje.
+    Usado para avisos is_novo e pontuais — não consomem o limite de 3/dia do rodízio.
+    """
     hoje = datetime.now().strftime('%Y-%m-%d')
     conn = get_db()
     existing = conn.execute(
@@ -1899,20 +1907,26 @@ def registrar_exibicao_aviso(aviso_id: int, user_id: int):
     ).fetchone()
     if existing:
         if existing['ultima_exibicao_data'] == hoje:
-            conn.execute(
-                'UPDATE avisos_usuarios SET exibicoes_hoje=exibicoes_hoje+1 WHERE aviso_id=? AND user_id=?',
-                (aviso_id, user_id)
-            )
+            # Já registrado hoje: só incrementa se contar_no_limite; senão não altera nada
+            if contar_no_limite:
+                conn.execute(
+                    'UPDATE avisos_usuarios SET exibicoes_hoje=exibicoes_hoje+1 WHERE aviso_id=? AND user_id=?',
+                    (aviso_id, user_id)
+                )
         else:
+            # Dia anterior: atualiza data; exibicoes_hoje = 1 ou 0 conforme limite
+            qtd = 1 if contar_no_limite else 0
             conn.execute(
-                'UPDATE avisos_usuarios SET exibicoes_hoje=1, ultima_exibicao_data=? WHERE aviso_id=? AND user_id=?',
-                (hoje, aviso_id, user_id)
+                'UPDATE avisos_usuarios SET exibicoes_hoje=?, ultima_exibicao_data=? WHERE aviso_id=? AND user_id=?',
+                (qtd, hoje, aviso_id, user_id)
             )
     else:
+        # Sem registro (caso padrão de is_novo): INSERT com exibicoes_hoje = 1 ou 0
+        qtd = 1 if contar_no_limite else 0
         conn.execute(
             '''INSERT INTO avisos_usuarios (aviso_id, user_id, exibicoes_hoje, ultima_exibicao_data)
-               VALUES (?, ?, 1, ?)''',
-            (aviso_id, user_id, hoje)
+               VALUES (?, ?, ?, ?)''',
+            (aviso_id, user_id, qtd, hoje)
         )
     conn.commit()
     conn.close()

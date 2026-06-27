@@ -493,7 +493,7 @@ def api_avisos_proximo():
     uid = session.get('user_id')
     aviso = database.get_aviso_proximo(uid)
     if aviso:
-        database.registrar_exibicao_aviso(aviso['id'], uid)
+        database.registrar_exibicao_aviso(aviso['id'], uid, contar_no_limite=not aviso['is_novo'])
     return jsonify({'aviso': aviso})
 
 

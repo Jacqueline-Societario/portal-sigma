@@ -896,9 +896,15 @@
       </div>`;
 
     document.body.appendChild(card);
-    // "Entendi" chama fecharCard diretamente — sem função intermediária
+    // "Entendi" marca o aviso como lido antes de fechar.
+    // ID capturado antes de fecharCard() pois fecharCard zera _avisoAtualId (linha 839).
+    // Auto-dismiss (setTimeout abaixo) chama fecharCard sem marcar — comportamento distinto.
     document.getElementById('avisoFloatEntendi')
-      .addEventListener('click', fecharCard);
+      .addEventListener('click', async function() {
+        const id = _avisoAtualId;
+        if (id) await fetch('/api/avisos/' + id + '/ler', { method: 'POST' });
+        fecharCard();
+      });
 
     // Auto-dismiss: card some sozinho após 2h (mesmas regras do Entendi)
     _autoDismissTimer = setTimeout(fecharCard, 2 * 3600 * 1000);
