@@ -106,6 +106,17 @@ def _data_extenso() -> str:
     hoje = date.today()
     return f'{hoje.day} de {MESES_PT[hoje.month - 1]} de {hoje.year}'
 
+def _extrair_municipio_uf(endereco: str) -> str:
+    """Extrai 'Cidade/UF' do endereço completo.
+    Exemplo: 'Rua X, 123, Goiânia/GO, cep 74000-000' → 'Goiânia/GO'
+    """
+    if not endereco:
+        return ''
+    m = re.search(r'([\w\s\-]+)/([A-Z]{2})(?:\b|\s|,|$)', endereco, re.UNICODE)
+    if m:
+        return f'{m.group(1).strip()}/{m.group(2)}'
+    return ''
+
 
 # ─── Preenchimento de template DOCX ──────────────────────────────────────────
 
@@ -146,10 +157,11 @@ def _preencher_template(arquivo: str, valores: dict) -> io.BytesIO:
 
 def _valores_outorgante(dados: dict) -> dict:
     """Extrai e formata os campos do outorgante comuns a vários modelos."""
+    endereco = dados.get('endereco', '')
     return {
         'RAZAO_SOCIAL':           _upper(dados.get('razao_social', '')),
         'CNPJ':                   _fmt_cnpj(dados.get('cnpj', '')),
-        'ENDERECO':               _title(dados.get('endereco', '')),
+        'ENDERECO':               _title(endereco),
         'NOME_REPRESENTANTE':     _upper(dados.get('nome_representante', '')),
         'ESTADO_CIVIL':           _lower(dados.get('estado_civil', '')),
         'PROFISSAO':              _lower(dados.get('profissao', '')),
@@ -157,6 +169,7 @@ def _valores_outorgante(dados: dict) -> dict:
         'DOMICILIO_REPRESENTANTE':_title(dados.get('domicilio_representante', '')),
         'CPF_REPRESENTANTE':      _fmt_cpf(dados.get('cpf_representante', '')),
         'DATA_EXTENSO':           _data_extenso(),
+        'MUNICIPIO_UF':           _title(_extrair_municipio_uf(endereco)),
     }
 
 
