@@ -751,6 +751,13 @@ def criar_usuario(nome: str, email: str) -> dict:
         (nome, email, senha_hash)
     )
     user_id = cur.lastrowid
+    # Módulos inativados por padrão para novos usuários
+    _TOOLS_INATIVOS_PADRAO = ('empresas_editar', 'avisos', 'conferencia', 'contrato')
+    for tool in _TOOLS_INATIVOS_PADRAO:
+        conn.execute(
+            'INSERT OR REPLACE INTO user_permissions (user_id, tool, allowed) VALUES (?, ?, 0)',
+            (user_id, tool)
+        )
     conn.commit()
     conn.close()
     return {'ok': True, 'id': user_id}
