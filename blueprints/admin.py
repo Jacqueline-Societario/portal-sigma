@@ -222,6 +222,20 @@ def usuarios_revogar_dispositivos(user_id):
     return jsonify({'ok': True})
 
 
+@admin_bp.route('/check-stepup')
+def check_stepup():
+    """Verifica se step-up está ativo para a sessão admin atual (GET — sem efeito colateral)."""
+    if admin_required():
+        return jsonify({'erro': 'Acesso negado'}), 403
+    from security import should_require_stepup_for_session
+    required, reason = should_require_stepup_for_session(session, 'admin_area', is_admin=True)
+    verify_url = url_for('webauthn.verify_page',
+                         purpose='stepup',
+                         next='/admin/?abrir=novo_usuario',
+                         reason=reason) if required else None
+    return jsonify({'stepup_required': required, 'verify_url': verify_url})
+
+
 @admin_bp.route('/seguranca/logs')
 def seguranca_logs():
     """Retorna logs de segurança recentes (JSON)."""

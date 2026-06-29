@@ -613,7 +613,16 @@ document.querySelectorAll('.modal-overlay').forEach(m => {
 });
 
 /* ── Criar Usuário ── */
-function abrirModalCriar() {
+async function abrirModalCriar() {
+  try {
+    const r = await fetch('/admin/check-stepup');
+    const data = await r.json();
+    if (data.stepup_required) {
+      showToast('Verificação de segurança necessária. Redirecionando…', true);
+      setTimeout(() => { window.location.href = data.verify_url; }, 1200);
+      return;
+    }
+  } catch(e) { /* se falhar a checagem, abre o modal normalmente */ }
   document.getElementById('criar-nome').value = '';
   document.getElementById('criar-email').value = '';
   document.getElementById('modal-criar').classList.add('active');
@@ -761,6 +770,12 @@ function executarRedefinirSenha() {
     }
   })
   .catch(() => showToast('Erro de conexão', true));
+}
+
+// Retorno após step-up: abre modal automaticamente e limpa o parâmetro da URL
+if (new URLSearchParams(window.location.search).get('abrir') === 'novo_usuario') {
+  history.replaceState(null, '', '/admin/');
+  abrirModalCriar();
 }
 </script>
 </body>
