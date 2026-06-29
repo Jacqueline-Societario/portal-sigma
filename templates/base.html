@@ -573,8 +573,7 @@
     <div class="topbar-right">
       {% if session.get('user_nome') %}
       <!-- Botão Painel de Avisos -->
-      {% set _avisos_mod = modules_config | selectattr('id','equalto','avisos') | list %}
-      {% if _avisos_mod %}
+      {% if perm_avisos %}
       <div class="avisos-wrapper">
         <a href="{{ url_for('avisos.index') }}" class="avisos-btn" title="Painel de Avisos">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">

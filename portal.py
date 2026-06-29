@@ -300,6 +300,7 @@ def inject_modules_config():
     """Injeta módulos em todos os templates — fonte única de verdade."""
     from flask import session as _sess
     is_admin = _sess.get('is_admin', False)
+    uid = _sess.get('user_id')
     visible = _get_visible_modules(is_admin)
 
     # Grupos por categoria para seção "Todos os módulos" da Home
@@ -316,6 +317,7 @@ def inject_modules_config():
         modules_config=visible,
         modules_config_json=json.dumps(visible),
         modules_home_groups=home_groups,
+        perm_avisos=database.get_user_permission(uid, 'avisos') if uid else False,
     )
 
 
