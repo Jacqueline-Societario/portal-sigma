@@ -32,9 +32,9 @@ MODELOS_DISPONÍVEIS = [
         'tipo': 'poderes_especificos',
     },
     {
-        'nome': 'Procuração - Sigma',
+        'nome': 'Procuração de Serviços Contábeis',
         'arquivo': 'procuracao_sigma.docx',
-        'descricao': 'Procuração geral — modelo padrão Sigma',
+        'descricao': 'Procuração geral para serviços contábeis',
         'tipo': 'procuracao_geral',
     },
     {
@@ -163,6 +163,7 @@ def _valores_outorgante(dados: dict) -> dict:
         'CNPJ':                   _fmt_cnpj(dados.get('cnpj', '')),
         'ENDERECO':               _title(endereco),
         'NOME_REPRESENTANTE':     _upper(dados.get('nome_representante', '')),
+        'NACIONALIDADE':          _lower(dados.get('nacionalidade', '')),
         'ESTADO_CIVIL':           _lower(dados.get('estado_civil', '')),
         'PROFISSAO':              _lower(dados.get('profissao', '')),
         'RG_REPRESENTANTE':       dados.get('rg_representante', '').strip(),
@@ -214,10 +215,14 @@ def _gerar_procuracao(dados: dict) -> io.BytesIO:
 
     elif tipo == 'servicos_externos':
         valores = _valores_outorgante(dados)
-        valores['NOME_OUTORGADO']      = _title(dados.get('nome_outorgado', ''))
-        valores['PROFISSAO_OUTORGADO'] = _lower(dados.get('profissao_outorgado', ''))
-        valores['PODERES']             = dados.get('poderes', '').strip()
-        valores['VIGENCIA']            = dados.get('vigencia', 'prazo indeterminado').strip()
+        valores['NOME_OUTORGADO']         = _title(dados.get('nome_outorgado', ''))
+        valores['PROFISSAO_OUTORGADO']    = _lower(dados.get('profissao_outorgado', ''))
+        valores['ESTADO_CIVIL_OUTORGADO'] = _lower(dados.get('estado_civil_outorgado', ''))
+        valores['RG_OUTORGADO']           = dados.get('rg_outorgado', '').strip()
+        valores['CPF_OUTORGADO']          = _fmt_cpf(dados.get('cpf_outorgado', ''))
+        valores['ENDERECO_OUTORGADO']     = _title(dados.get('endereco_outorgado', ''))
+        valores['PODERES']                = dados.get('poderes', '').strip()
+        valores['VIGENCIA']               = dados.get('vigencia', 'prazo indeterminado').strip()
         return _preencher_template('procuracao_para_servicos_externos_terceirizado.docx', valores)
 
     else:
@@ -279,14 +284,15 @@ def gerar():
         'poderes_especificos':['razao_social', 'cnpj', 'nome_representante', 'cpf_representante', 'poderes'],
         'subst_com_reserva':  ['nome_substabelecido', 'cpf_substabelecido', 'empresa_concedente', 'cnpj_concedente'],
         'subst_sem_reserva':  ['nome_substabelecido', 'cpf_substabelecido', 'empresa_concedente', 'cnpj_concedente'],
-        'servicos_externos':  ['razao_social', 'cnpj', 'nome_representante', 'cpf_representante', 'nome_outorgado'],
+        'servicos_externos':  ['razao_social', 'cnpj', 'nome_representante', 'cpf_representante', 'nome_outorgado', 'cpf_outorgado'],
     }
     labels = {
         'razao_social': 'Razão Social', 'cnpj': 'CNPJ', 'nome_representante': 'Nome do Representante',
         'cpf_representante': 'CPF do Representante', 'poderes': 'Poderes outorgados',
         'nome_substabelecido': 'Nome do Substabelecido', 'cpf_substabelecido': 'CPF do Substabelecido',
         'empresa_concedente': 'Empresa que originou a procuração', 'cnpj_concedente': 'CNPJ da empresa concedente',
-        'nome_outorgado': 'Nome do Outorgado',
+        'nome_outorgado':  'Nome do Outorgado',
+        'cpf_outorgado':   'CPF do Outorgado',
     }
     for campo in obrigatorios.get(tipo, []):
         if not dados.get(campo, '').strip():
