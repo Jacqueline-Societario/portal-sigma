@@ -150,37 +150,30 @@
     </div>
   </div>
 
-  <!-- SEÇÃO: Outorgado (servicos_externos) -->
+  <!-- SEÇÃO: Outorgado (servicos_externos) — apenas nome e CPF; endereço é fixo (Sigma) -->
   <div class="form-card section-hidden" id="sec-outorgado">
     <h2>Outorgado (quem recebe os poderes)</h2>
+    <div class="hint" style="margin-bottom:14px;">O endereço do outorgado é preenchido automaticamente com o endereço da Sigma.</div>
     <div class="form-row">
       <div class="form-group">
         <label>Nome Completo <span class="required">*</span></label>
         <input type="text" name="nome_outorgado" placeholder="Ex: Maria Souza">
       </div>
       <div class="form-group">
-        <label>Profissão</label>
-        <input type="text" name="profissao_outorgado" placeholder="Ex: assistente administrativa">
-      </div>
-    </div>
-    <div class="form-row-3">
-      <div class="form-group">
-        <label>Estado Civil</label>
-        <input type="text" name="estado_civil_outorgado" placeholder="Ex: casado, solteiro">
-        <div class="hint">Será em letras minúsculas.</div>
-      </div>
-      <div class="form-group">
-        <label>RG</label>
-        <input type="text" name="rg_outorgado" placeholder="Ex: 1.234.567 DGPC/GO">
-      </div>
-      <div class="form-group">
         <label>CPF <span class="required">*</span></label>
         <input type="text" name="cpf_outorgado" placeholder="000.000.000-00">
       </div>
     </div>
+  </div>
+
+  <!-- SEÇÃO: Órgão / escopo (servicos_externos) -->
+  <div class="form-card section-hidden" id="sec-orgao">
+    <h2>Escopo dos Poderes</h2>
     <div class="form-group">
-      <label>Endereço completo</label>
-      <input type="text" name="endereco_outorgado" placeholder="Ex: Rua das Flores, nº 10, Goiânia/GO">
+      <label>Órgão / ato específico <span class="required">*</span></label>
+      <textarea name="orgao" rows="3"
+        placeholder="Ex: Representar a empresa perante a Receita Federal do Brasil no processo nº 12345.000000/2026-00"></textarea>
+      <div class="hint">Descreva o órgão ou ato para o qual os poderes são conferidos.</div>
     </div>
   </div>
 
@@ -271,7 +264,7 @@ const SECOES = {
   poderes_especificos:['sec-outorgante', 'sec-poderes', 'sec-vigencia', 'sec-botao'],
   subst_com_reserva:  ['sec-substabelecido', 'sec-empresa-concedente', 'sec-poderes', 'sec-vigencia', 'sec-botao'],
   subst_sem_reserva:  ['sec-substabelecido', 'sec-empresa-concedente', 'sec-poderes', 'sec-vigencia', 'sec-botao'],
-  servicos_externos:  ['sec-outorgante', 'sec-outorgado', 'sec-poderes', 'sec-vigencia', 'sec-botao'],
+  servicos_externos:  ['sec-outorgante', 'sec-outorgado', 'sec-orgao', 'sec-vigencia', 'sec-botao'],
 };
 
 function atualizarSecoes() {
@@ -287,7 +280,7 @@ function atualizarSecoes() {
     if (el) el.style.display = 'block';
   });
   // Poderes obrigatório apenas nos modelos que precisam
-  const poderesOb = ['poderes_especificos', 'servicos_externos'];
+  const poderesOb = ['poderes_especificos'];
   const req = document.getElementById('poderes-required');
   if (req) req.style.display = poderesOb.includes(tipo) ? 'inline' : 'none';
 }

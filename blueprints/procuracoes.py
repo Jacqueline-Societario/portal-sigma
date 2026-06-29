@@ -117,6 +117,38 @@ def _extrair_municipio_uf(endereco: str) -> str:
         return f'{m.group(1).strip()}/{m.group(2)}'
     return ''
 
+def _fmt_rg(v: str) -> str:
+    """Uppercase no órgão emissor do RG. Ex: '12346 ssp/go' → '12346 SSP/GO'"""
+    if not v:
+        return v
+    v = v.strip()
+    parts = v.rsplit(' ', 1)
+    if len(parts) == 2 and re.search(r'[A-Za-z]', parts[1]):
+        return f'{parts[0]} {parts[1].upper()}'
+    return v
+
+def _fmt_endereco(v: str) -> str:
+    """Title case + normaliza espaços + corrige CEP sem formatação."""
+    if not v:
+        return v
+    v = re.sub(r'  +', ' ', v.strip())
+    v = _title(v)
+    v = re.sub(r'\bCep\b', 'CEP', v)
+    v = re.sub(r'\bCEP\s+(\d{5})-?(\d{3})\b', r'CEP \1-\2', v)
+    return v
+
+def _fmt_vigencia(v: str) -> str:
+    """Formata DDMMYYYY ou YYYY-MM-DD para DD/MM/YYYY. Texto livre passa sem alteração."""
+    if not v or not v.strip():
+        return 'prazo indeterminado'
+    v = v.strip()
+    if re.match(r'^\d{8}$', v):
+        return f'{v[:2]}/{v[2:4]}/{v[4:]}'
+    m = re.match(r'^(\d{4})-(\d{2})-(\d{2})$', v)
+    if m:
+        return f'{m.group(3)}/{m.group(2)}/{m.group(1)}'
+    return v
+
 
 # ─── Preenchimento de template DOCX ──────────────────────────────────────────
 
@@ -161,16 +193,16 @@ def _valores_outorgante(dados: dict) -> dict:
     return {
         'RAZAO_SOCIAL':           _upper(dados.get('razao_social', '')),
         'CNPJ':                   _fmt_cnpj(dados.get('cnpj', '')),
-        'ENDERECO':               _title(endereco),
+        'ENDERECO':               _fmt_endereco(endereco),
         'NOME_REPRESENTANTE':     _upper(dados.get('nome_representante', '')),
         'NACIONALIDADE':          _lower(dados.get('nacionalidade', '')),
         'ESTADO_CIVIL':           _lower(dados.get('estado_civil', '')),
         'PROFISSAO':              _lower(dados.get('profissao', '')),
-        'RG_REPRESENTANTE':       dados.get('rg_representante', '').strip(),
-        'DOMICILIO_REPRESENTANTE':_title(dados.get('domicilio_representante', '')),
+        'RG_REPRESENTANTE':       _fmt_rg(dados.get('rg_representante', '')),
+        'DOMICILIO_REPRESENTANTE':_fmt_endereco(dados.get('domicilio_representante', '')),
         'CPF_REPRESENTANTE':      _fmt_cpf(dados.get('cpf_representante', '')),
         'DATA_EXTENSO':           _data_extenso(),
-        'MUNICIPIO_UF':           _title(_extrair_municipio_uf(endereco)),
+        'MUNICIPIO_UF':           _extrair_municipio_uf(endereco),
     }
 
 
@@ -184,18 +216,18 @@ def _gerar_procuracao(dados: dict) -> io.BytesIO:
     elif tipo == 'poderes_especificos':
         valores = _valores_outorgante(dados)
         valores['PODERES']  = dados.get('poderes', '').strip()
-        valores['VIGENCIA'] = dados.get('vigencia', 'prazo indeterminado').strip()
+        valores['VIGENCIA'] = _fmt_vigencia(dados.get('vigencia', ''))
         return _preencher_template('procuracao_poderes_especificos_sigma.docx', valores)
 
     elif tipo == 'subst_com_reserva':
         valores = {
             'NOME_SUBSTABELECIDO': _title(dados.get('nome_substabelecido', '')),
             'CPF_SUBSTABELECIDO':  _fmt_cpf(dados.get('cpf_substabelecido', '')),
-            'RG_SUBSTABELECIDO':   dados.get('rg_substabelecido', '').strip(),
+            'RG_SUBSTABELECIDO':   _fmt_rg(dados.get('rg_substabelecido', '')),
             'EMPRESA_CONCEDENTE':  _upper(dados.get('empresa_concedente', '')),
             'CNPJ_CONCEDENTE':     _fmt_cnpj(dados.get('cnpj_concedente', '')),
             'PODERES':             dados.get('poderes', '').strip(),
-            'VIGENCIA':            dados.get('vigencia', 'prazo indeterminado').strip(),
+            'VIGENCIA':            _fmt_vigencia(dados.get('vigencia', '')),
             'DATA_EXTENSO':        _data_extenso(),
         }
         return _preencher_template('substabelecimento_com_reserva_sigma.docx', valores)
@@ -204,25 +236,21 @@ def _gerar_procuracao(dados: dict) -> io.BytesIO:
         valores = {
             'NOME_SUBSTABELECIDO': _title(dados.get('nome_substabelecido', '')),
             'CPF_SUBSTABELECIDO':  _fmt_cpf(dados.get('cpf_substabelecido', '')),
-            'RG_SUBSTABELECIDO':   dados.get('rg_substabelecido', '').strip(),
+            'RG_SUBSTABELECIDO':   _fmt_rg(dados.get('rg_substabelecido', '')),
             'EMPRESA_CONCEDENTE':  _upper(dados.get('empresa_concedente', '')),
             'CNPJ_CONCEDENTE':     _fmt_cnpj(dados.get('cnpj_concedente', '')),
             'PODERES':             dados.get('poderes', '').strip(),
-            'VIGENCIA':            dados.get('vigencia', 'prazo indeterminado').strip(),
+            'VIGENCIA':            _fmt_vigencia(dados.get('vigencia', '')),
             'DATA_EXTENSO':        _data_extenso(),
         }
         return _preencher_template('substabelecimento_sem_reserva_sigma.docx', valores)
 
     elif tipo == 'servicos_externos':
         valores = _valores_outorgante(dados)
-        valores['NOME_OUTORGADO']         = _title(dados.get('nome_outorgado', ''))
-        valores['PROFISSAO_OUTORGADO']    = _lower(dados.get('profissao_outorgado', ''))
-        valores['ESTADO_CIVIL_OUTORGADO'] = _lower(dados.get('estado_civil_outorgado', ''))
-        valores['RG_OUTORGADO']           = dados.get('rg_outorgado', '').strip()
-        valores['CPF_OUTORGADO']          = _fmt_cpf(dados.get('cpf_outorgado', ''))
-        valores['ENDERECO_OUTORGADO']     = _title(dados.get('endereco_outorgado', ''))
-        valores['PODERES']                = dados.get('poderes', '').strip()
-        valores['VIGENCIA']               = dados.get('vigencia', 'prazo indeterminado').strip()
+        valores['NOME_OUTORGADO'] = _title(dados.get('nome_outorgado', ''))
+        valores['CPF_OUTORGADO']  = _fmt_cpf(dados.get('cpf_outorgado', ''))
+        valores['ORGAO']          = dados.get('orgao', '').strip()
+        valores['VIGENCIA']       = _fmt_vigencia(dados.get('vigencia', ''))
         return _preencher_template('procuracao_para_servicos_externos_terceirizado.docx', valores)
 
     else:
@@ -284,7 +312,7 @@ def gerar():
         'poderes_especificos':['razao_social', 'cnpj', 'nome_representante', 'cpf_representante', 'poderes'],
         'subst_com_reserva':  ['nome_substabelecido', 'cpf_substabelecido', 'empresa_concedente', 'cnpj_concedente'],
         'subst_sem_reserva':  ['nome_substabelecido', 'cpf_substabelecido', 'empresa_concedente', 'cnpj_concedente'],
-        'servicos_externos':  ['razao_social', 'cnpj', 'nome_representante', 'cpf_representante', 'nome_outorgado', 'cpf_outorgado'],
+        'servicos_externos':  ['razao_social', 'cnpj', 'nome_representante', 'cpf_representante', 'nome_outorgado', 'cpf_outorgado', 'orgao'],
     }
     labels = {
         'razao_social': 'Razão Social', 'cnpj': 'CNPJ', 'nome_representante': 'Nome do Representante',
@@ -293,6 +321,7 @@ def gerar():
         'empresa_concedente': 'Empresa que originou a procuração', 'cnpj_concedente': 'CNPJ da empresa concedente',
         'nome_outorgado':  'Nome do Outorgado',
         'cpf_outorgado':   'CPF do Outorgado',
+        'orgao':           'Órgão / escopo dos poderes',
     }
     for campo in obrigatorios.get(tipo, []):
         if not dados.get(campo, '').strip():
@@ -308,7 +337,16 @@ def gerar():
 
     _limpar_cache()
     token = str(uuid.uuid4())
-    nome_base = f"Procuracao_{dados.get('razao_social', dados.get('empresa_concedente', 'documento')).replace(' ', '_')[:30]}"
+    tipo_labels = {
+        'procuracao_geral':    'ServicosContabeis',
+        'poderes_especificos': 'PoderesEspecificos',
+        'subst_com_reserva':   'SubstComReserva',
+        'subst_sem_reserva':   'SubstSemReserva',
+        'servicos_externos':   'ServicosExternos',
+    }
+    label_tipo = tipo_labels.get(tipo, tipo)
+    empresa = dados.get('razao_social', dados.get('empresa_concedente', 'documento'))
+    nome_base = f"Procuracao_{label_tipo}_{empresa.replace(' ', '_')[:25]}"
     _PROC_CACHE[token] = {
         'docx': buf.read(),
         'nome': nome_base,
