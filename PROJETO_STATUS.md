@@ -1,5 +1,5 @@
 # PROJETO_STATUS — Sigma / Portal Societário
-**Última atualização**: 24/06/2026 | **Responsável**: Yuzu
+**Última atualização**: 29/06/2026 | **Responsável**: Yuzu
 
 ## STATUS GERAL
 Portal web Flask do Departamento Societário da Sigma Contabilidade. Rodando na VPS Sigma (societario.gsigma.com.br, porta 5080). **Novo layout implementado (07/04/2026 noite): sidebar branca, dashboard com saudação + cards, empresas com filter pills + grid de cards.**
@@ -95,8 +95,8 @@ Portal web Flask do Departamento Societário da Sigma Contabilidade. Rodando na 
 - [ ] **URGENTE: Diagnosticar e corrigir editor Quill não aparece** — testar CDN no browser da Sigma, inspecionar console JS, verificar se div tem height > 0
 - [ ] Testar acesso por outra colaboradora (societario2@gsigma.com.br)
 - [ ] **Exibir campo `responsavel` na lista e detalhe de empresas no portal** (08/04/2026)
-- [ ] **Painel de Avisos** — planejado. Plano: `docs/PLANO_PAINEL_AVISOS.md`. Mapeamento cirúrgico: `docs/MAPEAMENTO_IMPACTO_PAINEL_AVISOS.md`. Mockup: `docs/mockup_painel_avisos.html`
-- [ ] **IMPLEMENTAR: Painel de Avisos** — 5 arquivos (database.py, portal.py, blueprints/avisos.py, templates/avisos/index.html, base.html). Mapeamento completo pronto.
+- [x] **Painel de Avisos — Fase 2** — IMPLEMENTADO E DEPLOYADO 27/06/2026. Commits 4bbe377, 8974db9, 402587a. Slots 10h/13h/16h (Brasília), badge NOVO carmim, fecharCard unificado (marca sino), rota GET /api/avisos/<id>/ver, bleach em criar/editar, editor rico contenteditable (N/I/S), Enter→br, strip HTML da descrição da notificação do sino.
+- [x] **Painel de Avisos — Correção 4 Gaps** — IMPLEMENTADO E DEPLOYADO 27/06/2026. Commit 6699d59. Gap 1: Entendi marca aviso como lido (POST /ler, wrapper async com captura de ID). Gap 2: rodízio prioriza nao_lido antes de lido (ORDER BY au.status). Gap 3: aviso pontual (rodizio=0) aparece como card uma vez (removido AND a.rodizio=1 da etapa 1). Gap 4: exibições is_novo não consomem o limite 3/dia (parâmetro contar_no_limite em registrar_exibicao_aviso).
 - [ ] Phase 2: Módulo Consulta de Empresas (integração Gestta nightly sync)
 - [ ] Adicionar mais usuárias conforme necessário (editar database.py)
 
@@ -137,3 +137,5 @@ templates/
 | 30/04/2026 | Módulo Processos em Andamento: blueprint, 3 tabelas, UI, webhook, importação 29 respostas históricas. OAuth Forms falhou (client deletado) | ⚠️ |
 | 03/06/2026 | Git/GitHub: SECRET_KEY adicionada ao .env VPS (sem exibir), permissões normalizadas (04e53bc), core.filemode=false, DEPLOY.md+CHECKLIST+README atualizados, commit bc64846 publicado no GitHub | ✅ |
 | 24/06/2026 | Planejamento Painel de Avisos: análise de todos os arquivos-chave (database.py, portal.py, base.html), plano consolidado, mapeamento cirúrgico com pontos exatos de inserção por linha. Implementação pendente. | ⚠️ |
+| 27/06/2026 | Painel de Avisos — Correção 4 gaps (Entendi→lido, rodízio prioriza nao_lido, pontual vira card, is_novo não bloqueia limite). Commit 6699d59. Deploy VPS OK. | ✅ |
+| 29/06/2026 | Painel Admin — fix criação de usuário: JS trata stepup_required (5 funções), next=/admin/ no before_request, redirect pós-passkey corrigido, open redirect validado, step-up antecipado no botão Novo Usuário (check-stepup endpoint + modal auto-abre ao retornar). Permissões padrão: 4 módulos inativados automaticamente ao criar usuário (empresas_editar, avisos, conferencia, contrato). Commits 0c481ed, ab1c634, 1a16ffb. Deploy VPS OK. | ✅ |
