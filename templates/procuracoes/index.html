@@ -260,7 +260,7 @@ function atualizarSecoes() {
   const ativas = SECOES[tipo] || [];
   ativas.forEach(id => {
     const el = document.getElementById(id);
-    if (el) el.style.display = '';
+    if (el) el.style.display = 'block';
   });
   // Poderes obrigatório apenas nos modelos que precisam
   const poderesOb = ['poderes_especificos', 'servicos_externos'];
