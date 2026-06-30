@@ -128,13 +128,15 @@ def _fmt_rg(v: str) -> str:
     return v
 
 def _fmt_endereco(v: str) -> str:
-    """Title case + normaliza espaços + corrige CEP sem formatação."""
+    """Title case + normaliza espaços + corrige CEP sem formatação + UF em maiúsculo."""
     if not v:
         return v
     v = re.sub(r'  +', ' ', v.strip())
     v = _title(v)
     v = re.sub(r'\bCep\b', 'CEP', v)
     v = re.sub(r'\bCEP\s+(\d{5})-?(\d{3})\b', r'CEP \1-\2', v)
+    # Restaura sigla de UF (2 letras após '/') para maiúsculo: Goiânia/Go → Goiânia/GO
+    v = re.sub(r'/([A-Za-z]{2})\b', lambda m: '/' + m.group(1).upper(), v)
     return v
 
 def _fmt_vigencia(v: str) -> str:
