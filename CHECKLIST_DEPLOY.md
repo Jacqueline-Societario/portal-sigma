@@ -28,7 +28,7 @@ Procedimento completo em DEPLOY.md.
 - [ ] `portal.db` nao foi alterado
 - [ ] `uploads/` nao foi alterado
 - [ ] `credentials/` nao foi alterado
-- [ ] `static/data/` nao foi alterado
+- [ ] `static/data/` nao foi alterado — excecao: `cnae_subclasses.json` e `cnae_sinonimos.json` sao versionados e PODEM mudar (fazem parte do deploy do modulo CNAE)
 - [ ] `backup_config.json` nao foi alterado
 
 ### Avaliacao de risco
@@ -56,7 +56,7 @@ Procedimento completo em DEPLOY.md.
 - [ ] `portal.db` da VPS NAO foi sobrescrito
 - [ ] `uploads/` da VPS NAO foi sobrescrito
 - [ ] `credentials/` da VPS NAO foi sobrescrito
-- [ ] `static/data/` da VPS NAO foi sobrescrito
+- [ ] `static/data/` da VPS NAO foi sobrescrito — excecao: artefatos CNAE versionados (`cnae_subclasses.json`, `cnae_sinonimos.json`) sao atualizados no deploy do modulo, com backup previo
 
 ### Aplicacao (metodo futuro: git pull — apos remote configurado na VPS)
 

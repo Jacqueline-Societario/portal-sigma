@@ -112,7 +112,8 @@ git log --oneline -3
 ### Etapa 3 — Aplicar alteracoes
 
 **Metodo atual (enquanto remote GitHub nao estiver conectado na VPS):**
-Transferencia manual de arquivos via SSH com base64.
+Transferencia manual de arquivos via SSH — preferencial: `tar czf` no WSL + `scp` + `tar xzf` na VPS,
+com conferencia `md5sum -c` (validado em 10/07/2026); alternativa: base64.
 Usar apenas arquivos versionados.
 Nunca transferir `.env`, `portal.db`, `credentials/`, `uploads/`.
 
@@ -177,7 +178,8 @@ Anotar em DEPLOY.md, secao "Historico de commits implantados":
 
 ## Regras de seguranca
 
-- Nunca versionar `.env`, `portal.db`, `credentials/`, `uploads/`, `static/data/`, `backup_config.json`, `logs/`, `backups/`, arquivos `.xlsx` gerados, tokens ou chaves
+- Nunca versionar `.env`, `portal.db`, `credentials/`, `uploads/`, `backup_config.json`, `logs/`, `backups/`, arquivos `.xlsx` gerados, tokens ou chaves
+- `static/data/`: conteudo NAO versionado, com duas excecoes deliberadas (desde 10/07/2026): `cnae_subclasses.json` (base de busca CNAE) e `cnae_sinonimos.json` — versionadas para permitir reconstruir a VPS sem depender do IBGE no ar; sao parte do deploy do modulo CNAE
 - Nunca usar `git add .` — sempre adicionar arquivos especificos
 - Nunca sobrescrever o `.env` da VPS em deploy
 - Nunca sobrescrever `portal.db`, `uploads/`, `credentials/` da VPS em deploy
@@ -205,3 +207,4 @@ Se algo der errado apos deploy:
 - 02/06/2026 | e9fda46 | Commit inicial — Git proprio criado | Jacqueline / Yuzu
 - 03/06/2026 | 04e53bc | Normalizar permissoes de assets binarios | Yuzu (nao implantado na VPS ainda)
 - 08/06/2026 | 4a55953 | fix: corrigir ids f_nome/f_cnpj em detalhe.html — campos Nome e CNPJ nao salvavam | Yuzu (implantado + restart servico)
+- 10/07/2026 | 9c257f1 | cnae: busca por descritores oficiais (17.137) + sinonimos + notas explicativas; base 1332 subclasses (uniao planilha+API) versionada | Claude/Jacqueline (implantado via tar+scp, md5 10/10 OK, QA 10/10 no ambiente da VPS antes do restart, servico estavel, rota testada)
