@@ -1,0 +1,25 @@
+{
+  "_doc": "Grupos de termos equivalentes usados pela busca CNAE do portal. Dentro de um grupo, buscar por um termo tambem encontra os demais. Tudo em minusculas e sem acento. 'grupos_ibge' reproduz a tabela oficial de sinonimos da busca CNAE do IBGE (ajuda de busca-online-cnae.html, capturada em 09/07/2026) — nao editar. 'grupos_sigma' e da equipe Sigma: pode adicionar termos do dia a dia livremente (um grupo por linha, todos os termos equivalentes juntos).",
+  "grupos_ibge": [
+    ["abate", "corte", "derrubada"],
+    ["agricultura", "agricola"],
+    ["atacadista", "atacado"],
+    ["bovinos", "boi", "bovino", "vaca"],
+    ["comercio", "comercializacao", "compra", "concessionaria", "distribuidora", "exportadora", "importadora", "loja", "revenda", "revendedora", "venda"],
+    ["desperdicio", "desmanche", "desmantela"],
+    ["educacao", "ensino"],
+    ["industria", "confeccao", "fabrica", "fabricacao", "fabricante", "industrial", "industrializacao", "producao"],
+    ["intermediarios", "agente", "comissionario", "intermediacao", "intermediario", "representacao", "representante"],
+    ["lavoura", "cultivo", "cultura", "plantacao"],
+    ["locacao", "aluguel"],
+    ["manutencao", "conserto", "reparacao", "reparo"],
+    ["obra", "construtora", "edificacao", "empreiteiro"],
+    ["produtos", "artigos"],
+    ["reciclagem", "recuperacao"],
+    ["varejista", "varejo"],
+    ["veiculo", "veiculos", "automoveis", "automovel", "autos", "carros"]
+  ],
+  "grupos_sigma": [
+    ["pneu", "pneus", "pneumatico", "pneumaticos"]
+  ]
+}

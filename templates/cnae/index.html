@@ -51,6 +51,14 @@
 .sugestao-code { font-weight: 700; color: var(--sigma-red); font-size: 11px; white-space: nowrap; }
 .sugestao-desc { color: var(--text); line-height: 1.4; }
 .sugestao-sub  { color: var(--muted); font-size: 11px; margin-top: 2px; }
+.sugestao-via  { color: var(--muted); font-size: 11px; margin-top: 2px; font-style: italic; }
+.sugestao-via b { color: var(--text); font-weight: 600; }
+.sugestao-ibge {
+  font-size: 10px; color: var(--muted); text-decoration: none;
+  border: 1px solid var(--border); border-radius: 4px; padding: 1px 6px;
+  white-space: nowrap;
+}
+.sugestao-ibge:hover { color: var(--sigma-red); border-color: var(--sigma-red); }
 
 /* Manuais */
 .manual-row { display: flex; gap: 8px; margin-top: 12px; }
@@ -329,8 +337,12 @@ function renderSugestoes(resultados) {
         <div style="display:flex;align-items:center;gap:8px;">
           <span class="sugestao-code">${formatarCodigo(s.id)}</span>
           <span class="sugestao-desc">${s.descricao}</span>
+          <a class="sugestao-ibge" href="https://concla.ibge.gov.br/busca-online-cnae.html?view=subclasse&tipo=cnae&versao=10.1.0&subclasse=${cod}"
+             title="Ver esta subclasse no site do IBGE"
+             onclick="event.preventDefault();event.stopPropagation();window.open(this.href,'_blank');">IBGE</a>
         </div>
         <div class="sugestao-sub">${s.secao} — ${s.divisao_desc || s.secao_desc}</div>
+        ${s.descritor_casado ? `<div class="sugestao-via">encontrado por: <b>${s.descritor_casado}</b></div>` : ''}
       </div>`;
     lista.appendChild(item);
   });

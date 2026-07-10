@@ -9,7 +9,6 @@ Atualizar:  python scripts/atualizar_base_cnae_concla.py
 import os
 import json
 import threading
-import unicodedata
 import re
 from typing import Optional
 import httpx
@@ -17,6 +16,9 @@ from lxml import html as lxml_html
 from flask import Blueprint, render_template, request, jsonify, session, redirect, url_for
 
 from blueprints.auth import login_obrigatorio
+from blueprints.cnae_busca import (
+    construir_indice, carregar_sinonimos, buscar as executar_busca_cnae,
+)
 import database
 
 cnae_bp = Blueprint('cnae', __name__, url_prefix='/cnae')
@@ -24,6 +26,7 @@ cnae_bp = Blueprint('cnae', __name__, url_prefix='/cnae')
 # ── Caminho da base local CNAE ────────────────────────────────────────────────
 _BASE_DIR  = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 _JSON_PATH = os.path.join(_BASE_DIR, 'static', 'data', 'cnae_subclasses.json')
+_SINONIMOS_PATH = os.path.join(_BASE_DIR, 'static', 'data', 'cnae_sinonimos.json')
 
 # ── Cache de subclasses (carregado uma vez por processo) ──────────────────────
 _ibge_cache: list = []
@@ -62,66 +65,38 @@ def _carregar_ibge() -> list:
         return _ibge_cache
 
 
-def _normalizar(texto: str) -> str:
-    return unicodedata.normalize('NFKD', texto).encode('ascii', 'ignore').decode().lower()
+# ── Índice de busca (construído uma vez por processo) ─────────────────────────
+_indice_busca = None
+_indice_lock = threading.Lock()
+
+
+def _obter_indice():
+    """Constrói o índice de busca na primeira chamada; não cacheia base vazia."""
+    global _indice_busca
+    if _indice_busca is not None:
+        return _indice_busca
+    subclasses = _carregar_ibge()
+    with _indice_lock:
+        if _indice_busca is None:
+            sinonimos = carregar_sinonimos(_SINONIMOS_PATH)
+            indice = construir_indice(subclasses, sinonimos)
+            if not indice['itens']:
+                return indice   # base ausente/inválida — permite retry sem restart
+            _indice_busca = indice
+    return _indice_busca
 
 
 def _buscar_ibge(query: str) -> list:
     """
-    Busca subclasses por texto (com/sem acento, parcial) ou por código
-    (com ou sem máscara: '6920601' e '6920-6/01' são equivalentes).
-    Retorna até 20 resultados ordenados por relevância.
+    Busca subclasses por texto ou por código (com/sem máscara) na base local
+    enriquecida: denominação oficial, descritores CONCLA, notas explicativas,
+    hierarquia e sinônimos. Regras e ranking em blueprints/cnae_busca.py.
+    Retorna até 20 resultados com o descritor que casou.
     """
-    subclasses = _carregar_ibge()
-    if not subclasses:
+    indice = _obter_indice()
+    if not indice['itens']:
         return []
-
-    termos = _normalizar(query).split()
-    if not termos:
-        return []
-
-    # Detectar busca por código (query contém apenas dígitos após remover separadores)
-    q_cod = re.sub(r'\D', '', query)
-    busca_por_codigo = bool(q_cod) and all(c.isdigit() for c in q_cod)
-
-    resultados = []
-    for s in subclasses:
-        score = 0
-
-        if busca_por_codigo:
-            # Correspondência exata ou parcial pelo código
-            if s['codigo_sem_mascara'] == q_cod:
-                score = 20          # exato
-            elif s['codigo_sem_mascara'].startswith(q_cod) or q_cod in s['codigo_sem_mascara']:
-                score = 10          # parcial
-        else:
-            # Busca textual: peso 2 se o termo estiver na descrição principal,
-            # peso 1 se estiver apenas no contexto hierárquico
-            desc_norm = _normalizar(s.get('descricao', ''))
-            ctx_norm  = s.get('termos_normalizados', desc_norm)
-            for t in termos:
-                if t in desc_norm:
-                    score += 2
-                elif t in ctx_norm:
-                    score += 1
-
-        if score > 0:
-            resultados.append((score, s))
-
-    resultados.sort(key=lambda x: (-x[0], x[1].get('descricao', '')))
-
-    return [
-        {
-            'id':           s['codigo_sem_mascara'],
-            'descricao':    s['descricao'],
-            'secao':        s.get('secao', ''),
-            'secao_desc':   s.get('secao_desc', ''),
-            'divisao':      s.get('divisao', ''),
-            'divisao_desc': s.get('divisao_desc', ''),
-            'classe_desc':  s.get('classe_desc', ''),
-        }
-        for _, s in resultados[:20]
-    ]
+    return executar_busca_cnae(indice, query, limite=20)
 
 
 # ── Sessão Objetiva com httpx + 2captcha (sem Playwright) ────────────────────

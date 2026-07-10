@@ -57,6 +57,7 @@ portal-sigma/
     movimentacao.py          # movimentação de sócios
     diario_oficial.py        # consulta ao diário oficial
     cnae.py                  # consulta de CNAE
+    cnae_busca.py            # motor de busca CNAE (descritores, sinonimos, ranking)
     anotacoes.py             # anotações internas
     passkeys.py              # gerenciamento de passkeys
     webauthn_bp.py           # fluxo WebAuthn
@@ -69,7 +70,10 @@ portal-sigma/
     sigma_logo.png
 
   scripts/
-    atualizar_base_cnae_concla.py  # atualiza base CNAE local
+    atualizar_base_cnae_concla.py  # baixa planilha CONCLA e gera base CNAE (estrutura)
+    raspar_descritores_concla.py   # captura descritores oficiais (cache incremental)
+    gerar_base_cnae_v2.py          # consolida base CNAE enriquecida (formato 2)
+    testar_busca_cnae.py           # QA da busca CNAE (suite de casos)
 
   docs/                      # documentação técnica
     ESPECIFICACAO_TECNICA_CONFERENCIA_V2.md
@@ -89,7 +93,7 @@ Os itens abaixo estão cobertos pelo `.gitignore` e nunca devem entrar em commit
 - `uploads/` — arquivos enviados por usuários
 - `logs/` — logs operacionais
 - `backups/` — backups gerados automaticamente
-- `static/data/` — dados CNAE gerados (arquivo grande, regenerável)
+- `static/data/*` — dados gerados; exceções versionadas de propósito: `cnae_subclasses.json` (base de busca CNAE) e `cnae_sinonimos.json` (sinônimos, editável pela equipe)
 - `backup_config.json` — estado operacional de backup (IDs de planilha, último backup)
 - `*.xlsx`, `SNAPSHOT_*.xlsx` — planilhas e relatórios gerados
 

@@ -74,7 +74,11 @@ token*.json
 # -------------------------------------------------------
 # Dados gerados (CNAE e outros)
 # -------------------------------------------------------
-static/data/
+# Conteudo ignorado, exceto artefatos CNAE versionados de proposito
+# (permitem reconstruir a VPS sem depender do IBGE no ar — 09/07/2026):
+static/data/*
+!static/data/cnae_subclasses.json
+!static/data/cnae_sinonimos.json
 
 # -------------------------------------------------------
 # Planilhas e relatorios gerados
