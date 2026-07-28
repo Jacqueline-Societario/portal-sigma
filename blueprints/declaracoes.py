@@ -732,10 +732,18 @@ def _gerar_docx_habite_se(dados: dict) -> io.BytesIO:
     p = doc.add_paragraph()
     _run(p, f'{municipio}, {hoje.day} de {MESES_PT[hoje.month - 1]} de {hoje.year}.', size=11)
 
-    doc.add_paragraph()
+    for _ in range(6):
+        doc.add_paragraph()
 
-    # Assinatura
+    # Assinatura — legenda pequena em cinza + nome da empresa logo abaixo
+    CINZA_ASSINATURA = RGBColor(0x7F, 0x7F, 0x7F)
     p = doc.add_paragraph()
+    p.paragraph_format.space_after = Pt(0)
+    p.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    _run(p, 'Assinatura', italic=True, size=10.5, color=CINZA_ASSINATURA)
+
+    p = doc.add_paragraph()
+    p.paragraph_format.space_after = Pt(0)
     p.alignment = WD_ALIGN_PARAGRAPH.CENTER
     _run(p, empresa_nome, bold=True, size=10.5, color=VERDE)
 
