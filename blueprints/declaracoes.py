@@ -25,6 +25,7 @@ MESES_PT = [
 TIPOS_DOCUMENTO = [
     # Especial — formulário dedicado
     'Requerimento de Uso do Solo - Goiânia',
+    'Declaração de Inexistência de Habite-se',
     # Declarações empresariais
     'Declaração de Enquadramento como Microempresa (ME)',
     'Declaração de Enquadramento como Empresa de Pequeno Porte (EPP)',
@@ -277,6 +278,38 @@ def uso_do_solo():
     }
     return jsonify({'token': token, 'nome': nome_docx, 'nome_pdf': nome_pdf})
 
+
+@declaracoes_bp.route('/habite-se', methods=['POST'])
+def habite_se():
+    if login_obrigatorio():
+        return jsonify({'erro': 'Não autorizado'}), 401
+
+    dados = request.get_json()
+    if not dados:
+        return jsonify({'erro': 'Dados inválidos'}), 400
+
+    for campo in ['empresa_nome', 'cnpj', 'inscricao_municipal', 'endereco']:
+        if not dados.get(campo, '').strip():
+            return jsonify({'erro': f'Campo obrigatório: {campo}'}), 400
+
+    if dados.get('municipio_opcao') == 'outro' and not dados.get('municipio_outro', '').strip():
+        return jsonify({'erro': 'Informe o nome do município.'}), 400
+
+    try:
+        buf = _gerar_docx_habite_se(dados)
+    except Exception as e:
+        return jsonify({'erro': f'Erro ao gerar documento: {str(e)}'}), 500
+
+    _limpar_cache()
+    token = str(uuid.uuid4())
+    empresa_slug = dados.get('empresa_nome', '').replace(' ', '_')[:30]
+    nome_arquivo = f"Declaracao_Inexistencia_Habite_se_{empresa_slug}.docx"
+    _DECL_CACHE[token] = {
+        'docx': buf.read(),
+        'nome': nome_arquivo,
+        'ts': time.time(),
+    }
+    return jsonify({'token': token, 'nome': nome_arquivo})
 
 
 def _gerar_docx_uso_do_solo(dados: dict) -> io.BytesIO:
@@ -577,6 +610,146 @@ def _gerar_pdf_uso_do_solo(dados: dict) -> io.BytesIO:
     buf.seek(0)
     return buf
 
+
+
+def _gerar_docx_habite_se(dados: dict) -> io.BytesIO:
+    """Gera DOCX da Declaração de Inexistência de Habite-se, seguindo o modelo padrão."""
+    from docx import Document
+    from docx.shared import Pt, Cm, RGBColor
+    from docx.enum.text import WD_ALIGN_PARAGRAPH
+    from docx.enum.table import WD_TABLE_ALIGNMENT
+    from docx.oxml.ns import qn
+    from docx.oxml import OxmlElement
+
+    empresa_nome  = dados.get('empresa_nome', '').strip()
+    cnpj          = dados.get('cnpj', '').strip()
+    inscricao_mun = dados.get('inscricao_municipal', '').strip()
+    endereco      = dados.get('endereco', '').strip()
+    e_goiania     = dados.get('municipio_opcao', 'goiania') != 'outro'
+    municipio     = 'Goiânia' if e_goiania else dados.get('municipio_outro', '').strip()
+
+    VERDE = RGBColor(0x16, 0x4B, 0x36)
+    CINZA_TEXTO = RGBColor(0x66, 0x66, 0x66)
+    CINZA_RODAPE = RGBColor(0x77, 0x77, 0x77)
+
+    def _run(paragraph, texto, bold=False, italic=False, size=11, color=None):
+        run = paragraph.add_run(texto)
+        run.font.size = Pt(size)
+        run.font.bold = bold
+        run.font.italic = italic
+        if color:
+            run.font.color.rgb = color
+        return run
+
+    def _set_table_borders(table, color='CFD8D3', sz=6):
+        tblPr = table._tbl.tblPr
+        borders = OxmlElement('w:tblBorders')
+        for edge in ('top', 'left', 'bottom', 'right', 'insideH', 'insideV'):
+            el = OxmlElement(f'w:{edge}')
+            el.set(qn('w:val'), 'single')
+            el.set(qn('w:sz'), str(sz))
+            el.set(qn('w:space'), '0')
+            el.set(qn('w:color'), color)
+            borders.append(el)
+        tblPr.append(borders)
+
+    def _shade_cell(cell, fill):
+        tcPr = cell._tc.get_or_add_tcPr()
+        shd = OxmlElement('w:shd')
+        shd.set(qn('w:val'), 'clear')
+        shd.set(qn('w:color'), 'auto')
+        shd.set(qn('w:fill'), fill)
+        tcPr.append(shd)
+
+    doc = Document()
+    for section in doc.sections:
+        section.top_margin = Cm(1.35)
+        section.bottom_margin = Cm(1.15)
+        section.left_margin = Cm(1.85)
+        section.right_margin = Cm(1.85)
+
+    # Brasão — só quando o destino é a Prefeitura de Goiânia
+    if e_goiania:
+        logo_path = os.path.join(
+            os.path.dirname(os.path.dirname(__file__)),
+            'static', 'templates', 'logo_prefeitura.png'
+        )
+        if os.path.exists(logo_path):
+            p_logo = doc.add_paragraph()
+            p_logo.alignment = WD_ALIGN_PARAGRAPH.CENTER
+            p_logo.add_run().add_picture(logo_path, width=Cm(17))
+
+    # Título
+    p = doc.add_paragraph()
+    p.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    _run(p, 'DECLARAÇÃO DE INEXISTÊNCIA DE HABITE-SE', bold=True, size=15.5, color=VERDE)
+
+    # Subtítulo
+    p = doc.add_paragraph()
+    p.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    _run(p, 'Processo de Alvará de Localização e Funcionamento', italic=True, size=11, color=CINZA_TEXTO)
+
+    # Destinatário
+    p = doc.add_paragraph()
+    _run(p, f'À Prefeitura de {municipio}', size=11.5)
+
+    # Tabela-resumo (Empresa / CNPJ / Serviço / Inscrição Municipal / Situação)
+    tabela = doc.add_table(rows=5, cols=2)
+    tabela.alignment = WD_TABLE_ALIGNMENT.CENTER
+    tabela.autofit = False
+    _set_table_borders(tabela)
+    linhas = [
+        ('Empresa', empresa_nome),
+        ('CNPJ', cnpj),
+        ('Serviço', 'Alvará de Localização e Funcionamento'),
+        ('Inscrição Municipal', inscricao_mun),
+        ('Situação', 'Processo em andamento'),
+    ]
+    for i, (label, valor) in enumerate(linhas):
+        cel_label = tabela.rows[i].cells[0]
+        cel_valor = tabela.rows[i].cells[1]
+        cel_label.width = Cm(4.45)
+        cel_valor.width = Cm(12.85)
+        _shade_cell(cel_label, 'E7EFEB')
+        _run(cel_label.paragraphs[0], label, bold=True, size=10, color=VERDE)
+        _run(cel_valor.paragraphs[0], valor, size=10)
+
+    doc.add_paragraph()
+
+    # Corpo da declaração
+    p = doc.add_paragraph()
+    p.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY
+    texto_corpo = (
+        f'A empresa {empresa_nome}, inscrita no CNPJ sob o nº {cnpj} e na Inscrição '
+        f'Municipal nº {inscricao_mun}, declara, para os devidos fins e para instrução '
+        f'do Processo de Alvará de Localização e Funcionamento, que o imóvel localizado '
+        f'na {endereco}, onde se encontra estabelecida a sua sede, não possui Habite-se.'
+    )
+    _run(p, texto_corpo, size=11)
+
+    # Local e data — sempre a data do dia da geração
+    hoje = date.today()
+    p = doc.add_paragraph()
+    _run(p, f'{municipio}, {hoje.day} de {MESES_PT[hoje.month - 1]} de {hoje.year}.', size=11)
+
+    doc.add_paragraph()
+
+    # Assinatura
+    p = doc.add_paragraph()
+    p.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    _run(p, empresa_nome, bold=True, size=10.5, color=VERDE)
+
+    # Rodapé
+    footer = doc.sections[0].footer
+    p_footer = footer.paragraphs[0]
+    p_footer.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    _run(p_footer, f'Documento referente à Inscrição Municipal nº {inscricao_mun} - CNPJ nº {cnpj}',
+         size=8, color=CINZA_RODAPE)
+
+    buf = io.BytesIO()
+    doc.save(buf)
+    buf.seek(0)
+    return buf
 
 
 @declaracoes_bp.route('/download/<token>')

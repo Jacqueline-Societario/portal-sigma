@@ -5,6 +5,7 @@
 {% block extra_styles %}
 /* Uso do Solo */
 #painel-uso-solo { display: none; }
+#painel-habite-se { display: none; }
 .uso-solo-info {
   background: #fff8f0; border: 1px solid #f59e0b;
   border-radius: 8px; padding: 12px 16px; margin-bottom: 20px;
@@ -248,6 +249,66 @@
   </form>
 </div>
 
+<!-- FORMULÁRIO ESPECIAL — Declaração de Inexistência de Habite-se -->
+<div id="painel-habite-se">
+  <div class="uso-solo-info">
+    <strong>Declaração de Inexistência de Habite-se</strong><br>
+    Serviço e Situação são preenchidos automaticamente, e a data sai sempre com o dia da geração.
+  </div>
+  <form id="form-habite-se">
+    <div class="form-card">
+      <h2>Dados da Empresa</h2>
+      <div class="form-row">
+        <div class="form-group">
+          <label for="hs-empresa">Nome / Razão Social <span class="required">*</span></label>
+          <input type="text" id="hs-empresa" placeholder="EMPRESA EXEMPLO LTDA">
+        </div>
+        <div class="form-group">
+          <label for="hs-cnpj">CNPJ <span class="required">*</span></label>
+          <input type="text" id="hs-cnpj" placeholder="00.000.000/0001-00">
+        </div>
+      </div>
+      <div class="form-group">
+        <label for="hs-inscricao">Inscrição Municipal <span class="required">*</span></label>
+        <input type="text" id="hs-inscricao" placeholder="0000000">
+      </div>
+    </div>
+
+    <div class="form-card">
+      <h2>Endereço do Imóvel (Sede)</h2>
+      <div class="form-group">
+        <label for="hs-endereco">Endereço completo <span class="required">*</span></label>
+        <input type="text" id="hs-endereco"
+               placeholder="Rua/Av. [nome], nº [número], Quadra [nº] (se houver), Lote [nº] (se houver), Complemento [nº] (se houver), Sala [nº] (se houver), Bairro/Setor [nome], CEP [00.000-000], Cidade/UF">
+        <div class="hint">Preencha tudo em uma linha só, na ordem do exemplo acima. Não esqueça Cidade/UF no final.</div>
+      </div>
+    </div>
+
+    <div class="form-card">
+      <h2>Município</h2>
+      <div class="form-group">
+        <label for="hs-municipio">Prefeitura destinatária <span class="required">*</span></label>
+        <select id="hs-municipio">
+          <option value="goiania">Goiânia</option>
+          <option value="outro">Outros</option>
+        </select>
+      </div>
+      <div class="form-group" id="hs-municipio-outro-group" style="display:none;">
+        <label for="hs-municipio-outro">Nome do município <span class="required">*</span></label>
+        <input type="text" id="hs-municipio-outro" placeholder="Nome do município">
+      </div>
+    </div>
+
+    <div class="actions">
+      <button type="submit" class="btn btn-primary" id="btn-gerar-habite-se">
+        <span id="btn-habite-se-label">Gerar Declaração</span>
+        <span id="spinner-habite-se" style="display:none;"><span class="spin-icon"></span></span>
+      </button>
+      <span id="status-habite-se" style="font-size:13px; color:#666;"></span>
+    </div>
+  </form>
+</div>
+
 <div id="msg-erro"></div>
 
 <div id="resultado">
@@ -264,6 +325,7 @@
 <script>
 var FORM_PADRAO = document.getElementById('form-declaracao');
 var PAINEL_SOLO = document.getElementById('painel-uso-solo');
+var PAINEL_HABITE = document.getElementById('painel-habite-se');
 
 document.getElementById('tipo').addEventListener('change', function() {
   var v = this.value;
@@ -271,9 +333,18 @@ document.getElementById('tipo').addEventListener('change', function() {
     v === 'Outro (descrever)' ? 'block' : 'none';
 
   var isUsoSolo = (v === 'Requerimento de Uso do Solo - Goiânia');
-  FORM_PADRAO.style.display   = isUsoSolo ? 'none' : 'block';
+  var isHabiteSe = (v === 'Declaração de Inexistência de Habite-se');
+
+  FORM_PADRAO.style.display   = (isUsoSolo || isHabiteSe) ? 'none' : 'block';
   PAINEL_SOLO.style.display   = isUsoSolo ? 'block' : 'none';
-  document.getElementById('destinatario-group').style.display = isUsoSolo ? 'none' : 'block';
+  PAINEL_HABITE.style.display = isHabiteSe ? 'block' : 'none';
+  document.getElementById('destinatario-group').style.display = (isUsoSolo || isHabiteSe) ? 'none' : 'block';
+});
+
+// Município (Habite-se): mostrar campo de texto só quando "Outros"
+document.getElementById('hs-municipio').addEventListener('change', function() {
+  document.getElementById('hs-municipio-outro-group').style.display =
+    this.value === 'outro' ? 'block' : 'none';
 });
 
 // ── CNAEs dinâmicos ────────────────────────────────────────────────
@@ -374,6 +445,64 @@ document.getElementById('form-uso-solo').addEventListener('submit', async functi
       } else {
         linkPdf.style.display = 'none';
       }
+      resultado.style.display = 'block';
+      resultado.scrollIntoView({behavior: 'smooth', block: 'center'});
+    }
+  } catch(err) {
+    msgErro.textContent = 'Erro de conexão. Tente novamente.';
+    msgErro.style.display = 'block';
+  } finally {
+    btn.disabled = false;
+    spinner.style.display = 'none';
+    status.textContent = '';
+  }
+});
+
+// Submit Habite-se
+document.getElementById('form-habite-se').addEventListener('submit', async function(e) {
+  e.preventDefault();
+  var btn     = document.getElementById('btn-gerar-habite-se');
+  var spinner = document.getElementById('spinner-habite-se');
+  var status  = document.getElementById('status-habite-se');
+  var msgErro = document.getElementById('msg-erro');
+  var resultado = document.getElementById('resultado');
+
+  var municipioOpcao = document.getElementById('hs-municipio').value;
+  var municipioOutro = document.getElementById('hs-municipio-outro').value.trim();
+  if (municipioOpcao === 'outro' && !municipioOutro) {
+    msgErro.textContent = 'Informe o nome do município.';
+    msgErro.style.display = 'block';
+    return;
+  }
+
+  btn.disabled = true;
+  spinner.style.display = 'inline-block';
+  status.textContent = 'Gerando documento...';
+  msgErro.style.display = 'none';
+  resultado.style.display = 'none';
+
+  var dados = {
+    empresa_nome:          document.getElementById('hs-empresa').value.trim(),
+    cnpj:                  document.getElementById('hs-cnpj').value.trim(),
+    inscricao_municipal:   document.getElementById('hs-inscricao').value.trim(),
+    endereco:              document.getElementById('hs-endereco').value.trim(),
+    municipio_opcao:       municipioOpcao,
+    municipio_outro:       municipioOutro,
+  };
+
+  try {
+    var resp = await fetch('/declaracoes/habite-se', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify(dados)
+    });
+    var json = await resp.json();
+    if (json.erro) {
+      msgErro.textContent = json.erro;
+      msgErro.style.display = 'block';
+    } else {
+      document.getElementById('link-docx').href = '/declaracoes/download/' + json.token;
+      document.getElementById('link-pdf').style.display = 'none';
       resultado.style.display = 'block';
       resultado.scrollIntoView({behavior: 'smooth', block: 'center'});
     }
